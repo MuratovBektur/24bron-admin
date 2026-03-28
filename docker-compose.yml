@@ -1,0 +1,28 @@
+name: 24bron-admin_prod
+
+services:
+
+  server:
+    container_name: "24bron-admin_server_prod"
+    restart: always
+    build: server
+    expose:
+      - 5000
+    env_file:
+    - .env
+    environment:
+      - NODE_ENV=production
+    command: npm run start:prod
+
+  nginx:
+    image: nginx
+    restart: "no"
+    container_name: "24bron-admin_nginx_prod"
+    ports:
+      - 80:80
+    depends_on:
+      - server
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./nginx/prod:/etc/nginx/conf.d
+      - ./client/dist:/usr/share/nginx/html
