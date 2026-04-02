@@ -12,16 +12,16 @@ import { User } from './user.entity';
 @Entity('owner_staff')
 export class OwnerStaff {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @ManyToOne(() => User, (user) => user.staffMembers, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'owner_id' })
-  owner: User;
+  owner!: User;
 
   @ManyToOne(() => User, (user) => user.ownerRelations, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'assistant_id' })
-  assistant: User;
+  assistant!: User;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 }
