@@ -10,7 +10,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Role } from './role.entity';
+import { UserRole } from './user-role.entity';
 import { OwnerStaff } from './owner-staff.entity';
 
 @Entity('users')
@@ -40,13 +40,13 @@ export class User {
   @JoinColumn({ name: 'created_by' })
   created_by!: User | null;
 
-  @ManyToMany(() => Role, (role) => role.users, { eager: true })
+  @ManyToMany(() => UserRole, (role) => role.users, { eager: true })
   @JoinTable({
-    name: 'user_roles',
+    name: 'users_user_roles',
     joinColumn: { name: 'user_id', referencedColumnName: 'id' },
     inverseJoinColumn: { name: 'role_id', referencedColumnName: 'id' },
   })
-  roles!: Role[];
+  roles!: UserRole[];
 
   // owner → его помощники (owner_assistant)
   @OneToMany(() => OwnerStaff, (ownerStaff) => ownerStaff.owner)

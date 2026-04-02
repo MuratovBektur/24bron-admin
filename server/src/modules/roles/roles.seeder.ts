@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Role, RoleName } from '../../entities/role.entity';
+import { UserRole, RoleName } from '../../entities/user-role.entity';
 
 const ROLES_SEED: { name: RoleName; description: string }[] = [
   {
@@ -32,8 +32,8 @@ const ROLES_SEED: { name: RoleName; description: string }[] = [
 @Injectable()
 export class RolesSeeder implements OnModuleInit {
   constructor(
-    @InjectRepository(Role)
-    private readonly rolesRepository: Repository<Role>,
+    @InjectRepository(UserRole)
+    private readonly rolesRepository: Repository<UserRole>,
   ) {}
 
   async onModuleInit() {

@@ -19,8 +19,8 @@ export const ADMIN_ASSIGNABLE_ROLES: RoleName[] = [
 // Роли, которые owner может назначать своим помощникам
 export const OWNER_ASSIGNABLE_ROLES: RoleName[] = [RoleName.OWNER_ASSISTANT];
 
-@Entity('roles')
-export class Role {
+@Entity('user_roles')
+export class UserRole {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
