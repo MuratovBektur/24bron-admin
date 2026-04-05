@@ -67,6 +67,17 @@ export class AuthService {
     };
   }
 
+  async getMe(userId: string): Promise<ValidatedUser> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      relations: ['roles'],
+    });
+    if (!user) throw new UnauthorizedException('User not found');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password_hash, ...result } = user;
+    return result;
+  }
+
   refresh(refreshToken: string) {
     try {
       const payload = this.jwtService.verify<JwtPayload>(refreshToken, {

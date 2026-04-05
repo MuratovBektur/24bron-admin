@@ -26,3 +26,8 @@ export async function apiRefresh(refreshToken: string): Promise<TokenPair> {
   const { data } = await api.post<TokenPair>('/auth/refresh', { refresh_token: refreshToken })
   return data
 }
+
+export async function apiGetMe(): Promise<LoginResponse['user']> {
+  const { data } = await api.get<LoginResponse['user']>('/auth/me')
+  return data
+}
