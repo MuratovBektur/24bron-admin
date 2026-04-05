@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import databaseConfig from './config/database.config';
 import { UsersModule } from './modules/users/users.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { RolesModule } from './modules/roles/roles.module';
     }),
     UsersModule,
     RolesModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Form, Input, Button, Checkbox, message } from 'ant-design-vue'
 import { MailOutlined, LockOutlined, CalendarOutlined } from '@ant-design/icons-vue'
+import { useAuthStore } from '@/stores/auth'
 
 const useForm = Form.useForm
+const router = useRouter()
+const authStore = useAuthStore()
 
 const formState = reactive({
   email: '',
@@ -30,11 +34,12 @@ async function handleLogin() {
   try {
     await validate()
     loading.value = true
-    // TODO: replace with real auth call
-    await new Promise((r) => setTimeout(r, 1200))
-    message.success('Вход выполнен успешно')
-  } catch {
-    // validation errors handled by Form
+    await authStore.login(formState.email, formState.password, formState.remember)
+    await router.push({ name: 'home' })
+  } catch (err) {
+    if (err instanceof Error) {
+      message.error(err.message)
+    }
   } finally {
     loading.value = false
   }
