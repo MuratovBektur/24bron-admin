@@ -1,22 +1,28 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import LoginPage from '@/pages/login/LoginPage.vue'
-import HomePage from '@/pages/home/HomePage.vue'
 import NotFoundPage from '@/pages/not-found/NotFoundPage.vue'
+import MainLayout from '@/layouts/MainLayout.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: '/',
-      name: 'home',
-      component: HomePage,
-      meta: { requiresAuth: true },
-    },
-    {
       path: '/login',
       name: 'login',
       component: LoginPage,
+    },
+    {
+      path: '/',
+      component: MainLayout,
+      meta: { requiresAuth: true },
+      children: [
+        {
+          path: '',
+          name: 'home',
+          component: () => import('@/pages/home/HomePage.vue'),
+        },
+      ],
     },
     {
       path: '/:pathMatch(.*)*',
@@ -37,7 +43,6 @@ router.beforeEach(async (to) => {
     return { name: 'home' }
   }
 
-  // Загружаем данные пользователя при первом посещении защищённого маршрута
   if (to.meta.requiresAuth && token) {
     const auth = useAuthStore()
     if (!auth.user) {

@@ -100,8 +100,8 @@ const roleLabels: Record<string, { label: string; color: string }> = {
 @use '@/assets/styles/variables' as *;
 
 .home {
-  min-height: 100vh;
   background: $bg-body;
+  min-height: calc(100vh - 56px);
   padding: 32px 24px;
 
   &__inner {
