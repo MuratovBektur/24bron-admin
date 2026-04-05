@@ -1,4 +1,4 @@
-const API_BASE = '/api'
+import api from './axios'
 
 export interface LoginResponse {
   access_token: string
@@ -18,21 +18,11 @@ export interface TokenPair {
 }
 
 export async function apiLogin(email: string, password: string): Promise<LoginResponse> {
-  const res = await fetch(`${API_BASE}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  })
-  if (!res.ok) throw new Error('Неверный email или пароль')
-  return res.json() as Promise<LoginResponse>
+  const { data } = await api.post<LoginResponse>('/auth/login', { email, password })
+  return data
 }
 
 export async function apiRefresh(refreshToken: string): Promise<TokenPair> {
-  const res = await fetch(`${API_BASE}/auth/refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh_token: refreshToken }),
-  })
-  if (!res.ok) throw new Error('Session expired')
-  return res.json() as Promise<TokenPair>
+  const { data } = await api.post<TokenPair>('/auth/refresh', { refresh_token: refreshToken })
+  return data
 }
