@@ -1,16 +1,37 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { useMediaQuery } from '@vueuse/core'
 import SidebarMenu from '@/components/layout/SidebarMenu.vue'
 import TopHeader from '@/components/layout/TopHeader.vue'
 
-const collapsed = ref(false)
+const isMobile = useMediaQuery('(max-width: 768px)')
+const collapsed = ref(isMobile.value)
+
+watch(isMobile, (mobile) => {
+  collapsed.value = mobile
+})
 </script>
 
 <template>
   <div class="layout">
     <SidebarMenu v-model:collapsed="collapsed" />
 
-    <main class="layout__body" :class="{ 'layout__body--collapsed': collapsed }">
+    <!-- Overlay для мобилы -->
+    <Transition name="fade">
+      <div
+        v-if="isMobile && !collapsed"
+        class="layout__overlay"
+        @click="collapsed = true"
+      />
+    </Transition>
+
+    <main
+      class="layout__body"
+      :class="{
+        'layout__body--collapsed': collapsed,
+        'layout__body--mobile': isMobile,
+      }"
+    >
       <TopHeader />
       <RouterView />
     </main>
@@ -35,12 +56,27 @@ $transition: 0.25s ease;
     &--collapsed {
       margin-left: $sider-collapsed-width;
     }
-  }
 
-  @media (max-width: 768px) {
-    &__body {
-      margin-left: $sider-collapsed-width;
+    // На мобиле контент никогда не двигается
+    &--mobile {
+      margin-left: $sider-collapsed-width !important;
     }
   }
+
+  &__overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 199;
+  }
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
