@@ -60,7 +60,7 @@ const menuItems = computed((): (MenuItem | MenuGroup)[] => {
   if (isAdmin.value || isOwner.value) {
     items.push(
       group('Управление', [
-        item('fields', AppstoreOutlined, 'Площадки', true),
+        item('complexes', AppstoreOutlined, 'Комплексы', !isAdmin.value),
         item('bookings', CalendarOutlined, 'Бронирования', true),
         item('schedule', CalendarOutlined, 'Расписание', true),
       ]),
@@ -89,7 +89,11 @@ const menuItems = computed((): (MenuItem | MenuGroup)[] => {
 const selectedKey = computed(() => route.name as string)
 
 function handleClick(key: string) {
-  if (key === 'home') router.push({ name: 'home' })
+  const routes: Record<string, string> = {
+    home: 'home',
+    complexes: 'complexes',
+  }
+  if (routes[key]) router.push({ name: routes[key] })
 }
 </script>
 

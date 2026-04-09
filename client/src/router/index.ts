@@ -22,6 +22,12 @@ const router = createRouter({
           name: 'home',
           component: () => import('@/pages/home/HomePage.vue'),
         },
+        {
+          path: 'complexes',
+          name: 'complexes',
+          component: () => import('@/pages/complexes/ComplexesPage.vue'),
+          meta: { roles: ['super_admin', 'admin'] },
+        },
       ],
     },
     {
@@ -45,6 +51,7 @@ router.beforeEach(async (to) => {
 
   if (to.meta.requiresAuth && token) {
     const auth = useAuthStore()
+
     if (!auth.user) {
       try {
         await auth.fetchMe()
@@ -52,6 +59,14 @@ router.beforeEach(async (to) => {
         auth.logout()
         return { name: 'login' }
       }
+    }
+
+    // Проверка ролей
+    const requiredRoles = to.meta.roles as string[] | undefined
+    if (requiredRoles?.length) {
+      const userRoles = auth.user?.roles.map((r) => r.name) ?? []
+      const hasRole = requiredRoles.some((r) => userRoles.includes(r))
+      if (!hasRole) return { name: 'home' }
     }
   }
 })
