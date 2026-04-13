@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { PlusOutlined, PhoneOutlined, EnvironmentOutlined, LinkOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, PhoneOutlined, EnvironmentOutlined, LinkOutlined, EditOutlined, RightOutlined } from '@ant-design/icons-vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 import { message } from 'ant-design-vue'
 import {
   apiGetComplexes,
@@ -145,12 +148,27 @@ onMounted(loadComplexes)
 
       <a-spin :spinning="loading">
         <div v-if="complexes.length" class="complexes__grid">
-          <div v-for="c in complexes" :key="c.id" class="complex-card">
+          <div
+            v-for="c in complexes"
+            :key="c.id"
+            class="complex-card"
+            @click="router.push({ name: 'complex-pitches', params: { id: c.id } })"
+          >
             <div class="complex-card__header">
-              <span class="complex-card__name">{{ c.name }}</span>
-              <a-tag :color="c.is_active ? 'green' : 'default'">
-                {{ c.is_active ? 'Активен' : 'Неактивен' }}
-              </a-tag>
+              <div class="complex-card__title-row">
+                <span class="complex-card__name">{{ c.name }}</span>
+                <a-tag :color="c.is_active ? 'green' : 'default'">
+                  {{ c.is_active ? 'Активен' : 'Неактивен' }}
+                </a-tag>
+              </div>
+              <a-button
+                type="text"
+                size="small"
+                class="complex-card__edit"
+                @click.stop="openEdit(c)"
+              >
+                <template #icon><EditOutlined /></template>
+              </a-button>
             </div>
             <div class="complex-card__info">
               <div class="complex-card__row">
@@ -163,14 +181,15 @@ onMounted(loadComplexes)
               </div>
               <div class="complex-card__row">
                 <LinkOutlined class="complex-card__icon" />
-                <a :href="c.map_link" target="_blank" rel="noopener" class="complex-card__link">
+                <a :href="c.map_link" target="_blank" rel="noopener" class="complex-card__link" @click.stop>
                   2ГИС
                 </a>
               </div>
               <p v-if="c.description" class="complex-card__desc">{{ c.description }}</p>
             </div>
             <div class="complex-card__footer">
-              <a-button size="small" @click="openEdit(c)">Изменить</a-button>
+              <span class="complex-card__hint">Перейти к полям</span>
+              <RightOutlined class="complex-card__arrow" />
             </div>
           </div>
         </div>
@@ -277,17 +296,37 @@ onMounted(loadComplexes)
   display: flex;
   flex-direction: column;
   gap: 12px;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.15s;
+
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+  }
 
   &__header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
+    gap: 8px;
+  }
+
+  &__title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
   }
 
   &__name {
     font-size: 16px;
     font-weight: 600;
     color: $text-primary;
+  }
+
+  &__edit {
+    flex-shrink: 0;
+    color: $text-secondary;
   }
 
   &__info {
@@ -328,7 +367,22 @@ onMounted(loadComplexes)
 
   &__footer {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
+    gap: 4px;
+    margin-top: 4px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    padding-top: 10px;
+  }
+
+  &__hint {
+    font-size: 12px;
+    color: $text-secondary;
+  }
+
+  &__arrow {
+    font-size: 11px;
+    color: $text-secondary;
   }
 }
 

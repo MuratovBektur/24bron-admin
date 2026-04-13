@@ -28,6 +28,12 @@ const router = createRouter({
           component: () => import('@/pages/complexes/ComplexesPage.vue'),
           meta: { roles: ['super_admin', 'admin'] },
         },
+        {
+          path: 'complexes/:id/pitches',
+          name: 'complex-pitches',
+          component: () => import('@/pages/pitches/PitchesPage.vue'),
+          meta: { roles: ['super_admin', 'admin'] },
+        },
       ],
     },
     {
