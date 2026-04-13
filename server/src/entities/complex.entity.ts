@@ -20,13 +20,16 @@ export class Complex {
   @Column()
   address!: string;
 
+  @Column()
+  map_link!: string;
+
   @Column({ nullable: true })
   description!: string;
 
   @Column({ nullable: true })
   phone!: string;
 
-  @Column({ default: true })
+  @Column({ default: false })
   is_active!: boolean;
 
   @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })

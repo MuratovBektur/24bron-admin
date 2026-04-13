@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../../entities/user.entity';
 import { UserRole, RoleName } from '../../entities/user-role.entity';
+import { RolesSeeder } from '../roles/roles.seeder';
 
 @Injectable()
 export class UsersSeeder implements OnModuleInit {
@@ -12,12 +13,15 @@ export class UsersSeeder implements OnModuleInit {
     private readonly usersRepository: Repository<User>,
     @InjectRepository(UserRole)
     private readonly rolesRepository: Repository<UserRole>,
+    private readonly rolesSeeder: RolesSeeder,
   ) {}
 
   async onModuleInit() {
+    // Гарантируем, что роли созданы до поиска
+    await this.rolesSeeder.onModuleInit();
+
     const userCount = await this.usersRepository.count();
     if (userCount === 0) {
-      // Создаем первого супер-админа
       const superAdminRole = await this.rolesRepository.findOneBy({
         name: RoleName.SUPER_ADMIN,
       });
@@ -29,7 +33,6 @@ export class UsersSeeder implements OnModuleInit {
 
       const firstName = process.env.SUPER_ADMIN_FIRST_NAME || 'Super';
       const lastName = process.env.SUPER_ADMIN_LAST_NAME || 'Admin';
-      //   const phone = process.env.SUPER_ADMIN_PHONE || '+1234567890';
       const email = process.env.SUPER_ADMIN_EMAIL || 'superadmin@example.com';
       const password = process.env.SUPER_ADMIN_PASSWORD || 'SuperAdmin123!';
 
@@ -38,7 +41,6 @@ export class UsersSeeder implements OnModuleInit {
       const superAdmin = this.usersRepository.create({
         first_name: firstName,
         last_name: lastName,
-        // phone: phone,
         email: email,
         password_hash: hashedPassword,
         is_active: true,

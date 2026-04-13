@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  Param,
+  Patch,
   Post,
   Request,
   UseGuards,
@@ -9,6 +11,7 @@ import {
 import { Request as ExpressRequest } from 'express';
 import { ComplexesService } from './complexes.service';
 import { CreateComplexDto } from './dto/create-complex.dto';
+import { UpdateComplexDto } from './dto/update-complex.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -32,5 +35,11 @@ export class ComplexesController {
   @Roles('super_admin', 'admin')
   create(@Body() dto: CreateComplexDto, @Request() req: JwtRequest) {
     return this.service.create(dto, req.user.userId);
+  }
+
+  @Patch(':id')
+  @Roles('super_admin', 'admin')
+  update(@Param('id') id: string, @Body() dto: UpdateComplexDto) {
+    return this.service.update(id, dto);
   }
 }

@@ -6,6 +6,6 @@ import { RolesSeeder } from './roles.seeder';
 @Module({
   imports: [TypeOrmModule.forFeature([UserRole])],
   providers: [RolesSeeder],
-  exports: [TypeOrmModule],
+  exports: [TypeOrmModule, RolesSeeder],
 })
 export class RolesModule {}
