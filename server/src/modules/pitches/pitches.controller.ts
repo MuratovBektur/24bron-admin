@@ -1,0 +1,37 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import { PitchesService } from './pitches.service';
+import { CreatePitchDto } from './dto/create-pitch.dto';
+import { UpdatePitchDto } from './dto/update-pitch.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+
+@Controller('complexes/:complexId/pitches')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('super_admin', 'admin')
+export class PitchesController {
+  constructor(private readonly service: PitchesService) {}
+
+  @Get()
+  findAll(@Param('complexId') complexId: string) {
+    return this.service.findByComplex(complexId);
+  }
+
+  @Post()
+  create(@Param('complexId') complexId: string, @Body() dto: CreatePitchDto) {
+    return this.service.create(complexId, dto);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdatePitchDto) {
+    return this.service.update(id, dto);
+  }
+}

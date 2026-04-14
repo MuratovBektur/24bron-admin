@@ -1,25 +1,223 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeftOutlined } from '@ant-design/icons-vue'
-import { apiGetComplexes, type Complex } from '@/api/complexes'
+import { ArrowLeftOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
+import { apiGetComplexes, type Complex } from '@/api/complexes'
+import {
+  apiGetPitches,
+  apiCreatePitch,
+  apiUpdatePitch,
+  type Pitch,
+  type PitchType,
+  type ParkingType,
+  type CreatePitchDto,
+  type UpdatePitchDto,
+} from '@/api/pitches'
 
 const route = useRoute()
 const router = useRouter()
-
 const complexId = route.params.id as string
+
 const complex = ref<Complex | null>(null)
+const pitches = ref<Pitch[]>([])
 const loading = ref(true)
+
+const modalOpen = ref(false)
+const submitting = ref(false)
+const editingId = ref<string | null>(null)
+
+interface FormState {
+  name: string
+  type: PitchType
+  width: number | null
+  length: number | null
+  height: number | null
+  price_per_hour: number | null
+  // секция инфраструктуры
+  infrastructure: boolean
+  has_locker_room: boolean
+  has_shower: boolean
+  has_lighting: boolean
+  stands_count: number | null
+  has_parking: boolean
+  parking_type: ParkingType | null
+  description: string
+  is_active: boolean
+}
+
+const emptyForm = (): FormState => ({
+  name: '',
+  type: 'open',
+  width: null,
+  length: null,
+  height: null,
+  price_per_hour: null,
+  infrastructure: false,
+  has_locker_room: false,
+  has_shower: false,
+  has_lighting: false,
+  stands_count: null,
+  has_parking: false,
+  parking_type: null,
+  description: '',
+  is_active: false,
+})
+
+const form = ref<FormState>(emptyForm())
+
+function onInfrastructureToggle(val: boolean) {
+  if (!val) {
+    form.value.has_locker_room = false
+    form.value.has_shower = false
+    form.value.has_lighting = false
+    form.value.stands_count = null
+    form.value.has_parking = false
+    form.value.parking_type = null
+  }
+}
+
+function onParkingChange(val: boolean) {
+  if (!val) form.value.parking_type = null
+}
+
+function openCreate() {
+  editingId.value = null
+  form.value = emptyForm()
+  modalOpen.value = true
+}
+
+function openEdit(p: Pitch) {
+  editingId.value = p.id
+  const hasInfra =
+    p.has_locker_room !== null ||
+    p.has_shower !== null ||
+    p.has_lighting !== null ||
+    p.has_parking !== null ||
+    p.stands_count !== null
+  form.value = {
+    name: p.name,
+    type: p.type,
+    width: p.width,
+    length: p.length,
+    height: p.height,
+    price_per_hour: Number(p.price_per_hour),
+    infrastructure: hasInfra,
+    has_locker_room: p.has_locker_room ?? false,
+    has_shower: p.has_shower ?? false,
+    has_lighting: p.has_lighting ?? false,
+    stands_count: p.stands_count,
+    has_parking: p.has_parking ?? false,
+    parking_type: p.parking_type,
+    description: p.description ?? '',
+    is_active: p.is_active,
+  }
+  modalOpen.value = true
+}
+
+function isValid(): boolean {
+  if (!form.value.name.trim()) {
+    message.warning('Введите название')
+    return false
+  }
+  if (!form.value.width || form.value.width <= 0) {
+    message.warning('Введите корректную ширину')
+    return false
+  }
+  if (!form.value.length || form.value.length <= 0) {
+    message.warning('Введите корректную длину')
+    return false
+  }
+  if (form.value.price_per_hour === null || form.value.price_per_hour < 0) {
+    message.warning('Введите корректную цену')
+    return false
+  }
+  if (form.value.infrastructure && form.value.has_parking && !form.value.parking_type) {
+    message.warning('Укажите тип парковки')
+    return false
+  }
+  return true
+}
+
+async function handleSubmit() {
+  if (!isValid()) return
+  submitting.value = true
+  try {
+    // если инфраструктура отключена — передаём null
+    const infraFields = form.value.infrastructure
+      ? {
+          has_locker_room: form.value.has_locker_room,
+          has_shower: form.value.has_shower,
+          has_lighting: form.value.has_lighting,
+          stands_count: form.value.stands_count,
+          has_parking: form.value.has_parking,
+          parking_type: form.value.has_parking ? form.value.parking_type : null,
+        }
+      : {
+          has_locker_room: null,
+          has_shower: null,
+          has_lighting: null,
+          stands_count: null,
+          has_parking: null,
+          parking_type: null,
+        }
+
+    const base: CreatePitchDto = {
+      name: form.value.name,
+      type: form.value.type,
+      width: form.value.width!,
+      length: form.value.length!,
+      height: form.value.height,
+      price_per_hour: form.value.price_per_hour!,
+      description: form.value.description || undefined,
+      ...infraFields,
+    }
+
+    if (editingId.value) {
+      const dto: UpdatePitchDto = { ...base, is_active: form.value.is_active }
+      const updated = await apiUpdatePitch(complexId, editingId.value, dto)
+      const idx = pitches.value.findIndex((p) => p.id === editingId.value)
+      if (idx !== -1) pitches.value[idx] = updated
+      message.success('Поле обновлено')
+    } else {
+      const created = await apiCreatePitch(complexId, base)
+      pitches.value.push(created)
+      message.success('Поле добавлено')
+    }
+    modalOpen.value = false
+  } catch {
+    message.error('Произошла ошибка. Попробуйте снова.')
+  } finally {
+    submitting.value = false
+  }
+}
+
+const pitchTypeLabel = (t: PitchType) => {
+  if (t === 'open') return 'Открытое'
+  if (t === 'covered') return 'Крытое'
+  return 'Футзал'
+}
+
+const amenityList = (p: Pitch) => {
+  const list: string[] = []
+  if (p.has_locker_room === true) list.push('Раздевалка')
+  if (p.has_shower === true) list.push('Душ')
+  if (p.has_lighting === true) list.push('Освещение')
+  if (p.has_parking === true)
+    list.push(p.parking_type === 'paid' ? 'Парковка (платная)' : 'Парковка (бесплатная)')
+  return list
+}
 
 onMounted(async () => {
   try {
-    const list = await apiGetComplexes()
+    const [list, pitchList] = await Promise.all([apiGetComplexes(), apiGetPitches(complexId)])
     complex.value = list.find((c) => c.id === complexId) ?? null
     if (!complex.value) {
       message.error('Комплекс не найден')
       router.push({ name: 'complexes' })
+      return
     }
+    pitches.value = pitchList
   } catch {
     message.error('Не удалось загрузить данные')
     router.push({ name: 'complexes' })
@@ -30,10 +228,14 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="pitches">
-    <div class="pitches__inner">
-      <div class="pitches__head">
-        <a-button type="text" class="pitches__back" @click="router.push({ name: 'complexes' })">
+  <div class="pitches-page">
+    <div class="pitches-page__inner">
+      <div class="pitches-page__head">
+        <a-button
+          type="text"
+          class="pitches-page__back"
+          @click="router.push({ name: 'complexes' })"
+        >
           <template #icon><ArrowLeftOutlined /></template>
           Назад к комплексам
         </a-button>
@@ -41,27 +243,210 @@ onMounted(async () => {
 
       <a-spin :spinning="loading">
         <template v-if="complex">
-          <div class="pitches__title-row">
-            <h1 class="pitches__title">{{ complex.name }}</h1>
-            <a-tag :color="complex.is_active ? 'green' : 'default'">
-              {{ complex.is_active ? 'Активен' : 'Неактивен' }}
-            </a-tag>
+          <div class="pitches-page__title-bar">
+            <div>
+              <div class="pitches-page__title-row">
+                <h1 class="pitches-page__title">{{ complex.name }}</h1>
+                <a-tag :color="complex.is_active ? 'green' : 'default'">
+                  {{ complex.is_active ? 'Активен' : 'Неактивен' }}
+                </a-tag>
+              </div>
+              <p class="pitches-page__address">{{ complex.address }}</p>
+            </div>
+            <a-button type="primary" @click="openCreate">
+              <template #icon><PlusOutlined /></template>
+              Добавить поле
+            </a-button>
           </div>
-          <p class="pitches__address">{{ complex.address }}</p>
 
-          <div class="pitches__empty">
+          <div v-if="pitches.length" class="pitches-page__grid">
+            <div v-for="p in pitches" :key="p.id" class="pitch-card">
+              <div class="pitch-card__header">
+                <div class="pitch-card__title-row">
+                  <span class="pitch-card__name">{{ p.name }}</span>
+                  <a-tag :bordered="false" color="blue">{{ pitchTypeLabel(p.type) }}</a-tag>
+                </div>
+                <div class="pitch-card__header-right">
+                  <a-tag :color="p.is_active ? 'green' : 'default'">
+                    {{ p.is_active ? 'Активно' : 'Неактивно' }}
+                  </a-tag>
+                  <a-button type="text" size="small" @click="openEdit(p)">
+                    <template #icon><EditOutlined /></template>
+                  </a-button>
+                </div>
+              </div>
+
+              <div class="pitch-card__stats">
+                <div class="pitch-card__stat">
+                  <span class="pitch-card__stat-label">Размер</span>
+                  <span class="pitch-card__stat-value">
+                    {{ p.width }} × {{ p.length }}{{ p.height ? ` × ${p.height}` : '' }} м
+                  </span>
+                </div>
+                <div class="pitch-card__stat">
+                  <span class="pitch-card__stat-label">Цена/час</span>
+                  <span class="pitch-card__stat-value pitch-card__price"
+                    >{{ p.price_per_hour }} сом</span
+                  >
+                </div>
+                <div v-if="p.stands_count" class="pitch-card__stat">
+                  <span class="pitch-card__stat-label">Трибуны</span>
+                  <span class="pitch-card__stat-value">{{ p.stands_count }} мест</span>
+                </div>
+              </div>
+
+              <div v-if="amenityList(p).length" class="pitch-card__amenities">
+                <a-tag
+                  v-for="a in amenityList(p)"
+                  :key="a"
+                  :bordered="false"
+                  class="pitch-card__amenity"
+                  >{{ a }}</a-tag
+                >
+              </div>
+
+              <p v-if="p.description" class="pitch-card__desc">{{ p.description }}</p>
+            </div>
+          </div>
+
+          <div v-else class="pitches-page__empty">
             <a-empty description="Поля пока не добавлены" />
           </div>
         </template>
       </a-spin>
     </div>
+
+    <!-- Modal -->
+    <a-modal
+      v-model:open="modalOpen"
+      :title="editingId ? 'Изменить поле' : 'Добавить поле'"
+      :confirm-loading="submitting"
+      ok-text="Сохранить"
+      cancel-text="Отмена"
+      width="560px"
+      @ok="handleSubmit"
+    >
+      <div class="modal-form">
+        <div class="modal-form__field">
+          <label class="modal-form__label">Название <span class="req">*</span></label>
+          <a-input v-model:value="form.name" placeholder="Например: Поле №1" />
+        </div>
+
+        <div class="modal-form__field">
+          <label class="modal-form__label">Тип поля <span class="req">*</span></label>
+          <a-radio-group v-model:value="form.type" button-style="solid">
+            <a-radio-button value="open">Открытое</a-radio-button>
+            <a-radio-button value="covered">Крытое</a-radio-button>
+            <a-radio-button value="futsal">Футзал</a-radio-button>
+          </a-radio-group>
+        </div>
+
+        <div class="modal-form__row">
+          <div class="modal-form__field">
+            <label class="modal-form__label">Ширина (м) <span class="req">*</span></label>
+            <a-input-number
+              v-model:value="form.width"
+              :min="1"
+              placeholder="40"
+              style="width: 100%"
+            />
+          </div>
+          <div class="modal-form__field">
+            <label class="modal-form__label">Длина (м) <span class="req">*</span></label>
+            <a-input-number
+              v-model:value="form.length"
+              :min="1"
+              placeholder="80"
+              style="width: 100%"
+            />
+          </div>
+          <div class="modal-form__field">
+            <label class="modal-form__label">Высота (м)</label>
+            <a-input-number
+              v-model:value="form.height"
+              :min="1"
+              placeholder="—"
+              style="width: 100%"
+            />
+          </div>
+        </div>
+
+        <div class="modal-form__field">
+          <label class="modal-form__label">Цена за час (сом) <span class="req">*</span></label>
+          <a-input-number
+            v-model:value="form.price_per_hour"
+            :min="0"
+            placeholder="500"
+            style="width: 100%"
+          />
+        </div>
+
+        <!-- Инфраструктура — заголовок с переключателем -->
+        <div class="modal-form__section-header">
+          <span class="modal-form__section-title">Инфраструктура</span>
+          <a-switch v-model:checked="form.infrastructure" @change="onInfrastructureToggle" />
+        </div>
+
+        <!-- Поля инфраструктуры — только если включено -->
+        <template v-if="form.infrastructure">
+          <div class="modal-form__infra">
+            <div class="modal-form__infra-row">
+              <span class="modal-form__infra-label">Раздевалка</span>
+              <a-switch v-model:checked="form.has_locker_room" />
+            </div>
+            <div class="modal-form__infra-row">
+              <span class="modal-form__infra-label">Душ</span>
+              <a-switch v-model:checked="form.has_shower" />
+            </div>
+            <div class="modal-form__infra-row">
+              <span class="modal-form__infra-label">Освещение</span>
+              <a-switch v-model:checked="form.has_lighting" />
+            </div>
+            <div class="modal-form__infra-row">
+              <span class="modal-form__infra-label">Трибуны (мест)</span>
+              <a-input-number
+                v-model:value="form.stands_count"
+                :min="0"
+                placeholder="—"
+                style="width: 120px"
+              />
+            </div>
+            <div class="modal-form__infra-row">
+              <span class="modal-form__infra-label">Парковка</span>
+              <a-switch v-model:checked="form.has_parking" @change="onParkingChange" />
+            </div>
+            <div v-if="form.has_parking" class="modal-form__infra-row modal-form__infra-row--sub">
+              <span class="modal-form__infra-label">Тип парковки <span class="req">*</span></span>
+              <a-radio-group v-model:value="form.parking_type" button-style="solid" size="small">
+                <a-radio-button value="free">Бесплатная</a-radio-button>
+                <a-radio-button value="paid">Платная</a-radio-button>
+              </a-radio-group>
+            </div>
+          </div>
+        </template>
+
+        <div class="modal-form__field">
+          <label class="modal-form__label">Описание</label>
+          <a-textarea
+            v-model:value="form.description"
+            placeholder="Дополнительная информация"
+            :rows="3"
+          />
+        </div>
+
+        <div class="modal-form__standalone-switch">
+          <label class="modal-form__label" style="margin: 0">Активно</label>
+          <a-switch v-model:checked="form.is_active" />
+        </div>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <style lang="scss" scoped>
 @use '@/assets/styles/variables' as *;
 
-.pitches {
+.pitches-page {
   background: $bg-body;
   min-height: calc(100vh - 56px);
   padding: 32px 24px;
@@ -80,11 +465,19 @@ onMounted(async () => {
     padding-left: 0;
   }
 
+  &__title-bar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
   &__title-row {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
 
   &__title {
@@ -97,7 +490,13 @@ onMounted(async () => {
   &__address {
     font-size: 14px;
     color: $text-secondary;
-    margin: 0 0 24px;
+    margin: 0;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
   }
 
   &__empty {
@@ -108,5 +507,164 @@ onMounted(async () => {
     display: flex;
     justify-content: center;
   }
+}
+
+.pitch-card {
+  background: $bg-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  &__title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__name {
+    font-size: 15px;
+    font-weight: 600;
+    color: $text-primary;
+  }
+
+  &__header-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  &__stats {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  &__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__stat-label {
+    font-size: 11px;
+    color: $text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__stat-value {
+    font-size: 14px;
+    font-weight: 500;
+    color: $text-primary;
+  }
+
+  &__price {
+    color: #1677ff;
+  }
+
+  &__amenities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  &__amenity {
+    font-size: 12px;
+    background: rgba(0, 0, 0, 0.04);
+    color: $text-secondary;
+  }
+
+  &__desc {
+    margin: 0;
+    font-size: 13px;
+    color: $text-secondary;
+    line-height: 1.5;
+  }
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 8px;
+
+  &__label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: $text-primary;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  &__section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+  }
+
+  &__section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: $text-primary;
+  }
+
+  &__infra {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+  }
+
+  &__infra-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    &--sub {
+      padding-left: 16px;
+      border-left: 2px solid rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  &__infra-label {
+    font-size: 14px;
+    color: $text-primary;
+  }
+
+  &__standalone-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 4px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+  }
+}
+
+.req {
+  color: #ff4d4f;
 }
 </style>

@@ -8,6 +8,7 @@ import { UsersModule } from './modules/users/users.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ComplexesModule } from './modules/complexes/complexes.module';
+import { PitchesModule } from './modules/pitches/pitches.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ComplexesModule } from './modules/complexes/complexes.module';
     RolesModule,
     AuthModule,
     ComplexesModule,
+    PitchesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
