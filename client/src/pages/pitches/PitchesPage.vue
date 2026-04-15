@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeftOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons-vue'
+import {
+  ArrowLeftOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+} from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { apiGetComplexes, type Complex } from '@/api/complexes'
 import {
   apiGetPitches,
   apiCreatePitch,
   apiUpdatePitch,
+  apiDeletePitch,
   type Pitch,
   type PitchType,
   type ParkingType,
@@ -192,6 +198,30 @@ async function handleSubmit() {
   }
 }
 
+const deleteModalOpen = ref(false)
+const deletingPitch = ref<Pitch | null>(null)
+const deleting = ref(false)
+
+function openDeleteModal(p: Pitch) {
+  deletingPitch.value = p
+  deleteModalOpen.value = true
+}
+
+async function confirmDelete() {
+  if (!deletingPitch.value) return
+  deleting.value = true
+  try {
+    await apiDeletePitch(complexId, deletingPitch.value.id)
+    pitches.value = pitches.value.filter((p) => p.id !== deletingPitch.value!.id)
+    deleteModalOpen.value = false
+    message.success('Поле удалено')
+  } catch {
+    message.error('Не удалось удалить поле')
+  } finally {
+    deleting.value = false
+  }
+}
+
 const pitchTypeLabel = (t: PitchType) => {
   if (t === 'open') return 'Открытое'
   if (t === 'covered') return 'Крытое'
@@ -273,6 +303,9 @@ onMounted(async () => {
                   <a-button type="text" size="small" @click="openEdit(p)">
                     <template #icon><EditOutlined /></template>
                   </a-button>
+                  <a-button type="text" size="small" danger @click="openDeleteModal(p)">
+                    <template #icon><DeleteOutlined /></template>
+                  </a-button>
                 </div>
               </div>
 
@@ -334,7 +367,11 @@ onMounted(async () => {
 
         <div class="modal-form__field">
           <label class="modal-form__label">Тип поля <span class="req">*</span></label>
-          <a-radio-group v-model:value="form.type" button-style="solid">
+          <a-radio-group
+            v-model:value="form.type"
+            button-style="solid"
+            class="modal-form__type-group"
+          >
             <a-radio-button value="open">Открытое</a-radio-button>
             <a-radio-button value="covered">Крытое</a-radio-button>
             <a-radio-button value="futsal">Футзал</a-radio-button>
@@ -439,6 +476,23 @@ onMounted(async () => {
           <a-switch v-model:checked="form.is_active" />
         </div>
       </div>
+    </a-modal>
+
+    <!-- Модалка удаления -->
+    <a-modal
+      v-model:open="deleteModalOpen"
+      title="Удалить поле"
+      :confirm-loading="deleting"
+      ok-text="Удалить"
+      cancel-text="Отмена"
+      ok-type="danger"
+      @ok="confirmDelete"
+    >
+      <p class="delete-confirm">
+        Вы уверены, что хотите удалить поле
+        <strong>{{ deletingPitch?.name }}</strong
+        >? Это действие нельзя отменить.
+      </p>
     </a-modal>
   </div>
 </template>
@@ -612,6 +666,15 @@ onMounted(async () => {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 12px;
+
+    @media (max-width: 480px) {
+      grid-template-columns: repeat(2, 1fr);
+
+      // Высота (третий элемент) занимает полную ширину
+      .modal-form__field:last-child {
+        grid-column: 1 / -1;
+      }
+    }
   }
 
   &__section-header {
@@ -662,9 +725,47 @@ onMounted(async () => {
     padding-top: 4px;
     border-top: 1px solid rgba(0, 0, 0, 0.06);
   }
+
+  &__type-group {
+    display: flex;
+    flex-wrap: nowrap;
+    width: 100%;
+
+    :deep(.ant-radio-button-wrapper) {
+      flex: 1;
+      text-align: center;
+      padding-inline: 8px;
+    }
+
+    @media (max-width: 400px) {
+      flex-wrap: wrap;
+
+      :deep(.ant-radio-button-wrapper) {
+        flex: 1 1 auto;
+      }
+    }
+  }
 }
 
 .req {
   color: #ff4d4f;
+}
+
+.delete-confirm {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+</style>
+
+<style>
+@media (max-width: 600px) {
+  .ant-modal {
+    max-width: calc(100vw - 24px) !important;
+    margin: 12px auto !important;
+  }
+  .ant-modal-content {
+    padding: 16px !important;
+  }
 }
 </style>

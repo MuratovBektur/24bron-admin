@@ -60,3 +60,7 @@ export async function apiUpdatePitch(
   const { data } = await api.patch<Pitch>(`/complexes/${complexId}/pitches/${id}`, dto)
   return data
 }
+
+export async function apiDeletePitch(complexId: string, id: string): Promise<void> {
+  await api.delete(`/complexes/${complexId}/pitches/${id}`)
+}

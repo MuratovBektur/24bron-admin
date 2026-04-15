@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -33,5 +36,11 @@ export class PitchesController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdatePitchDto) {
     return this.service.update(id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteById(@Param('id') id: string) {
+    return this.service.deleteById(id);
   }
 }

@@ -27,6 +27,12 @@ export class PitchesService {
     return this.repo.save(pitch);
   }
 
+  async deleteById(id: string): Promise<{ deleted: true }> {
+    const result = await this.repo.delete(id);
+    if (!result.affected) throw new NotFoundException('Поле не найдено');
+    return { deleted: true };
+  }
+
   async findByComplex(complexId: string): Promise<Pitch[]> {
     return this.repo.find({
       where: { complex: { id: complexId } },
