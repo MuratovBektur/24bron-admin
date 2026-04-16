@@ -8,6 +8,7 @@ import {
   DeleteOutlined,
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
+import dayjs, { type Dayjs } from 'dayjs'
 import { apiGetComplexes, type Complex } from '@/api/complexes'
 import {
   apiGetPitches,
@@ -48,6 +49,10 @@ interface FormState {
   stands_count: number | null
   has_parking: boolean
   parking_type: ParkingType | null
+  // время работы
+  is_24h: boolean
+  open_time: Dayjs | null
+  close_time: Dayjs | null
   description: string
   is_active: boolean
 }
@@ -66,6 +71,9 @@ const emptyForm = (): FormState => ({
   stands_count: null,
   has_parking: false,
   parking_type: null,
+  is_24h: true,
+  open_time: null,
+  close_time: null,
   description: '',
   is_active: false,
 })
@@ -115,6 +123,9 @@ function openEdit(p: Pitch) {
     stands_count: p.stands_count,
     has_parking: p.has_parking ?? false,
     parking_type: p.parking_type,
+    is_24h: p.is_24h,
+    open_time: p.open_time ? dayjs(p.open_time, 'HH:mm') : null,
+    close_time: p.close_time ? dayjs(p.close_time, 'HH:mm') : null,
     description: p.description ?? '',
     is_active: p.is_active,
   }
@@ -141,6 +152,16 @@ function isValid(): boolean {
   if (form.value.infrastructure && form.value.has_parking && !form.value.parking_type) {
     message.warning('Укажите тип парковки')
     return false
+  }
+  if (!form.value.is_24h) {
+    if (!form.value.open_time) {
+      message.warning('Укажите время открытия')
+      return false
+    }
+    if (!form.value.close_time) {
+      message.warning('Укажите время закрытия')
+      return false
+    }
   }
   return true
 }
@@ -175,6 +196,9 @@ async function handleSubmit() {
       length: form.value.length!,
       height: form.value.height,
       price_per_hour: form.value.price_per_hour!,
+      is_24h: form.value.is_24h,
+      open_time: form.value.is_24h ? null : (form.value.open_time?.format('HH:mm') ?? null),
+      close_time: form.value.is_24h ? null : (form.value.close_time?.format('HH:mm') ?? null),
       description: form.value.description || undefined,
       ...infraFields,
     }
@@ -326,6 +350,12 @@ onMounted(async () => {
                   <span class="pitch-card__stat-label">Трибуны</span>
                   <span class="pitch-card__stat-value">{{ p.stands_count }} мест</span>
                 </div>
+                <div class="pitch-card__stat">
+                  <span class="pitch-card__stat-label">Время</span>
+                  <span class="pitch-card__stat-value">
+                    {{ p.is_24h ? 'Круглосуточно' : `${p.open_time} – ${p.close_time}` }}
+                  </span>
+                </div>
               </div>
 
               <div v-if="amenityList(p).length" class="pitch-card__amenities">
@@ -458,6 +488,40 @@ onMounted(async () => {
                 <a-radio-button value="free">Бесплатная</a-radio-button>
                 <a-radio-button value="paid">Платная</a-radio-button>
               </a-radio-group>
+            </div>
+          </div>
+        </template>
+
+        <!-- Время работы -->
+        <div class="modal-form__section-header">
+          <span class="modal-form__section-title">Время работы</span>
+          <div class="modal-form__hours-toggle">
+            <span class="modal-form__hours-label">Круглосуточно</span>
+            <a-switch v-model:checked="form.is_24h" />
+          </div>
+        </div>
+
+        <template v-if="!form.is_24h">
+          <div class="modal-form__row modal-form__row--2">
+            <div class="modal-form__field">
+              <label class="modal-form__label">С <span class="req">*</span></label>
+              <a-time-picker
+                v-model:value="form.open_time"
+                format="HH:mm"
+                :minute-step="5"
+                placeholder="08:00"
+                style="width: 100%"
+              />
+            </div>
+            <div class="modal-form__field">
+              <label class="modal-form__label">До <span class="req">*</span></label>
+              <a-time-picker
+                v-model:value="form.close_time"
+                format="HH:mm"
+                :minute-step="5"
+                placeholder="23:00"
+                style="width: 100%"
+              />
             </div>
           </div>
         </template>
@@ -690,6 +754,29 @@ onMounted(async () => {
     font-size: 13px;
     font-weight: 600;
     color: $text-primary;
+  }
+
+  &__hours-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__hours-label {
+    font-size: 13px;
+    color: $text-secondary;
+  }
+
+  &__row--2 {
+    grid-template-columns: 1fr 1fr;
+
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr 1fr;
+
+      .modal-form__field:last-child {
+        grid-column: auto;
+      }
+    }
   }
 
   &__infra {

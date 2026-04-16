@@ -17,6 +17,9 @@ export interface Pitch {
   stands_count: number | null
   has_parking: boolean | null
   parking_type: ParkingType | null
+  is_24h: boolean
+  open_time: string | null
+  close_time: string | null
   description: string | null
   is_active: boolean
   created_at: string
@@ -35,6 +38,9 @@ export interface CreatePitchDto {
   stands_count?: number | null
   has_parking?: boolean | null
   parking_type?: ParkingType | null
+  is_24h?: boolean
+  open_time?: string | null
+  close_time?: string | null
   description?: string
 }
 

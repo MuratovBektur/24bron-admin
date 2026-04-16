@@ -13,5 +13,8 @@ export class CreatePitchDto {
   stands_count?: number | null;
   has_parking?: boolean | null;
   parking_type?: ParkingType | null;
+  is_24h?: boolean;
+  open_time?: string | null;
+  close_time?: string | null;
   description?: string;
 }

@@ -62,6 +62,15 @@ export class Pitch {
   @Column({ type: 'enum', enum: ParkingType, nullable: true })
   parking_type!: ParkingType | null;
 
+  @Column({ default: true })
+  is_24h!: boolean;
+
+  @Column({ type: 'varchar', length: 5, nullable: true })
+  open_time!: string | null;
+
+  @Column({ type: 'varchar', length: 5, nullable: true })
+  close_time!: string | null;
+
   @Column({ nullable: true })
   description!: string;
 
