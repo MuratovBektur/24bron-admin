@@ -29,6 +29,12 @@ const router = createRouter({
           meta: { roles: ['super_admin', 'admin'] },
         },
         {
+          path: 'users',
+          name: 'users',
+          component: () => import('@/pages/users/UsersPage.vue'),
+          meta: { roles: ['super_admin', 'admin'] },
+        },
+        {
           path: 'complexes/:id/pitches',
           name: 'complex-pitches',
           component: () => import('@/pages/pitches/PitchesPage.vue'),

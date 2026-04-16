@@ -70,7 +70,7 @@ const menuItems = computed((): (MenuItem | MenuGroup)[] => {
   if (isAdmin.value) {
     items.push(
       group('Администрирование', [
-        item('users', TeamOutlined, 'Пользователи', true),
+        item('users', TeamOutlined, 'Пользователи'),
         item('owners', UserOutlined, 'Владельцы', true),
       ]),
     )
@@ -92,6 +92,7 @@ function handleClick(key: string) {
   const routes: Record<string, string> = {
     home: 'home',
     complexes: 'complexes',
+    users: 'users',
   }
   if (routes[key]) router.push({ name: routes[key] })
 }

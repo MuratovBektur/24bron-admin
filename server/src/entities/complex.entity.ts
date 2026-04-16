@@ -33,6 +33,10 @@ export class Complex {
   is_active!: boolean;
 
   @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'owner_id' })
+  owner!: User | null;
+
+  @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'created_by' })
   created_by!: User | null;
 
