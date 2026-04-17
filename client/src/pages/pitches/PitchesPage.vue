@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeftOutlined,
@@ -55,6 +55,7 @@ interface FormState {
   close_time: Dayjs | null
   description: string
   is_active: boolean
+  quantity: number
 }
 
 const emptyForm = (): FormState => ({
@@ -76,9 +77,24 @@ const emptyForm = (): FormState => ({
   close_time: null,
   description: '',
   is_active: false,
+  quantity: 1,
 })
 
 const form = ref<FormState>(emptyForm())
+
+const previewNames = computed(() => {
+  const qty = form.value.quantity
+  const base = form.value.name.trim()
+  const nextIdx = pitches.value.length + 1
+
+  if (!base) {
+    return Array.from({ length: qty }, (_, i) => `Поле №${nextIdx + i}`)
+  }
+  if (qty > 1) {
+    return Array.from({ length: qty }, (_, i) => `${base} №${i + 1}`)
+  }
+  return []
+})
 
 function onInfrastructureToggle(val: boolean) {
   if (!val) {
@@ -133,10 +149,6 @@ function openEdit(p: Pitch) {
 }
 
 function isValid(): boolean {
-  if (!form.value.name.trim()) {
-    message.warning('Введите название')
-    return false
-  }
   if (!form.value.width || form.value.width <= 0) {
     message.warning('Введите корректную ширину')
     return false
@@ -189,8 +201,15 @@ async function handleSubmit() {
           parking_type: null,
         }
 
+    const resolvedName = (idx: number) => {
+      const typed = form.value.name.trim()
+      const qty = form.value.quantity
+      if (!typed) return `Поле №${pitches.value.length + 1 + idx}`
+      return qty > 1 ? `${typed} №${idx + 1}` : typed
+    }
+
     const base: CreatePitchDto = {
-      name: form.value.name,
+      name: resolvedName(0),
       type: form.value.type,
       width: form.value.width!,
       length: form.value.length!,
@@ -210,9 +229,20 @@ async function handleSubmit() {
       if (idx !== -1) pitches.value[idx] = updated
       message.success('Поле обновлено')
     } else {
-      const created = await apiCreatePitch(complexId, base)
-      pitches.value.push(created)
-      message.success('Поле добавлено')
+      const qty = form.value.quantity
+      if (qty > 1) {
+        const results = await Promise.all(
+          Array.from({ length: qty }, (_, i) =>
+            apiCreatePitch(complexId, { ...base, name: resolvedName(i) }),
+          ),
+        )
+        pitches.value.push(...results)
+        message.success(`Добавлено ${qty} полей`)
+      } else {
+        const created = await apiCreatePitch(complexId, base)
+        pitches.value.push(created)
+        message.success('Поле добавлено')
+      }
     }
     modalOpen.value = false
   } catch {
@@ -390,9 +420,25 @@ onMounted(async () => {
       @ok="handleSubmit"
     >
       <div class="modal-form">
-        <div class="modal-form__field">
-          <label class="modal-form__label">Название <span class="req">*</span></label>
-          <a-input v-model:value="form.name" placeholder="Например: Поле №1" />
+        <div class="modal-form__row modal-form__row--name">
+          <div class="modal-form__field">
+            <label class="modal-form__label">Название</label>
+            <a-input v-model:value="form.name" placeholder="Авто (Поле №N)" />
+          </div>
+          <div v-if="!editingId" class="modal-form__field modal-form__field--qty">
+            <label class="modal-form__label">Количество</label>
+            <a-input-number
+              v-model:value="form.quantity"
+              :min="1"
+              :max="20"
+              style="width: 100%"
+            />
+          </div>
+        </div>
+
+        <div v-if="previewNames.length" class="modal-form__preview">
+          <span class="modal-form__preview-label">Будут созданы:</span>
+          <span class="modal-form__preview-names">{{ previewNames.join(', ') }}</span>
         </div>
 
         <div class="modal-form__field">
@@ -724,6 +770,39 @@ onMounted(async () => {
     font-weight: 500;
     margin-bottom: 6px;
     color: $text-primary;
+  }
+
+  &__row--name {
+    display: grid;
+    grid-template-columns: 1fr 100px;
+    gap: 12px;
+
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr 80px;
+    }
+  }
+
+  &__preview {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
+    padding: 8px 12px;
+    background: rgba(22, 119, 255, 0.06);
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  &__preview-label {
+    color: $text-secondary;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  &__preview-names {
+    color: #1677ff;
+    font-weight: 500;
+    word-break: break-word;
   }
 
   &__row {
