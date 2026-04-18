@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { apiLogin, apiRefresh, apiGetMe, type LoginResponse } from '@/api/auth'
+import { apiLogin, apiRefresh, apiGetMe, apiChangePassword, type LoginResponse } from '@/api/auth'
 
 function readToken(key: string): string | null {
   return localStorage.getItem(key) ?? sessionStorage.getItem(key)
@@ -44,6 +44,11 @@ export const useAuthStore = defineStore('auth', () => {
     setTokens(data.access_token, data.refresh_token, inLocal)
   }
 
+  async function changePassword(newPassword: string) {
+    await apiChangePassword(newPassword)
+    if (user.value) user.value.must_change_password = false
+  }
+
   function logout() {
     accessToken.value = null
     refreshToken.value = null
@@ -63,6 +68,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     fetchMe,
     refresh,
+    changePassword,
     logout,
   }
 })

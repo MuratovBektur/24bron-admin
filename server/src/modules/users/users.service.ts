@@ -56,6 +56,7 @@ export class UsersService {
       phone: dto.phone,
       password_hash,
       is_active: true,
+      must_change_password: true,
       roles: [role],
       created_by: { id: createdById },
     });

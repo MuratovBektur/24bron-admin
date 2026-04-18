@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Post,
   Request,
   UseGuards,
@@ -34,5 +36,15 @@ export class AuthController {
   @Get('me')
   getMe(@Request() req: JwtRequest) {
     return this.authService.getMe(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  changePassword(
+    @Body() body: { new_password: string },
+    @Request() req: JwtRequest,
+  ) {
+    return this.authService.changePassword(req.user.userId, body.new_password);
   }
 }

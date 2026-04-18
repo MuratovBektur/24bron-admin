@@ -9,6 +9,7 @@ export interface LoginResponse {
     last_name: string
     email: string
     roles: { id: string; name: string }[]
+    must_change_password: boolean
   }
 }
 
@@ -30,4 +31,8 @@ export async function apiRefresh(refreshToken: string): Promise<TokenPair> {
 export async function apiGetMe(): Promise<LoginResponse['user']> {
   const { data } = await api.get<LoginResponse['user']>('/auth/me')
   return data
+}
+
+export async function apiChangePassword(newPassword: string): Promise<void> {
+  await api.post('/auth/change-password', { new_password: newPassword })
 }

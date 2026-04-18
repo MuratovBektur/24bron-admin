@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -66,8 +70,21 @@ export class AuthService {
         last_name: user.last_name,
         email: user.email,
         roles: user.roles,
+        must_change_password: user.must_change_password,
       },
     };
+  }
+
+  async changePassword(userId: string, newPassword: string): Promise<void> {
+    const user = await this.usersRepository.findOneBy({ id: userId });
+    if (!user) throw new UnauthorizedException();
+    if (newPassword.length < 6)
+      throw new BadRequestException(
+        'Пароль должен содержать минимум 6 символов',
+      );
+    user.password_hash = await bcrypt.hash(newPassword, 10);
+    user.must_change_password = false;
+    await this.usersRepository.save(user);
   }
 
   async getMe(userId: string): Promise<ValidatedUser> {

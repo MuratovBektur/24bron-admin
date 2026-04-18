@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { useMediaQuery } from '@vueuse/core'
 import SidebarMenu from '@/components/layout/SidebarMenu.vue'
 import TopHeader from '@/components/layout/TopHeader.vue'
+import ChangePasswordModal from '@/components/ChangePasswordModal.vue'
 
 const isMobile = useMediaQuery('(max-width: 768px)')
 const collapsed = ref(isMobile.value)
@@ -16,13 +17,8 @@ watch(isMobile, (mobile) => {
   <div class="layout">
     <SidebarMenu v-model:collapsed="collapsed" />
 
-    <!-- Overlay для мобилы -->
     <Transition name="fade">
-      <div
-        v-if="isMobile && !collapsed"
-        class="layout__overlay"
-        @click="collapsed = true"
-      />
+      <div v-if="isMobile && !collapsed" class="layout__overlay" @click="collapsed = true" />
     </Transition>
 
     <main
@@ -36,6 +32,8 @@ watch(isMobile, (mobile) => {
       <RouterView />
     </main>
   </div>
+
+  <ChangePasswordModal />
 </template>
 
 <style lang="scss" scoped>
@@ -57,7 +55,6 @@ $transition: 0.25s ease;
       margin-left: $sider-collapsed-width;
     }
 
-    // На мобиле контент никогда не двигается
     &--mobile {
       margin-left: $sider-collapsed-width !important;
     }

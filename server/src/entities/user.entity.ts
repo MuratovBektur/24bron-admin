@@ -36,6 +36,9 @@ export class User {
   @Column({ default: true })
   is_active!: boolean;
 
+  @Column({ default: false })
+  must_change_password!: boolean;
+
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'created_by' })
   created_by!: User | null;
