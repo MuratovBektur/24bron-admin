@@ -128,6 +128,10 @@ function isValid(): boolean {
     message.warning('Введите пароль')
     return false
   }
+  if (!editingId.value && showComplexField.value && !form.value.complex_id) {
+    message.warning('Выберите комплекс')
+    return false
+  }
   return true
 }
 
@@ -291,7 +295,9 @@ onMounted(async () => {
 
         <!-- Комплекс — только для владельца и помощника -->
         <div v-if="showComplexField" class="modal-form__field">
-          <label class="modal-form__label">Комплекс</label>
+          <label class="modal-form__label">
+            Комплекс <span v-if="!editingId" class="req">*</span>
+          </label>
           <a-spin :spinning="loadingComplex">
             <a-select
               v-model:value="form.complex_id"
