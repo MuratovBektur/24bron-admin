@@ -58,13 +58,13 @@ const menuItems = computed((): (MenuItem | MenuGroup)[] => {
   const items: (MenuItem | MenuGroup)[] = [item('home', HomeOutlined, 'Главная')]
 
   if (isAdmin.value || isOwner.value) {
-    items.push(
-      group('Управление', [
-        item('complexes', AppstoreOutlined, 'Комплексы', !isAdmin.value),
-        item('bookings', CalendarOutlined, 'Бронирования', true),
-        item('schedule', CalendarOutlined, 'Расписание', true),
-      ]),
+    const mgmtItems: MenuItem[] = []
+    if (isAdmin.value) mgmtItems.push(item('complexes', AppstoreOutlined, 'Комплексы'))
+    mgmtItems.push(
+      item('bookings', CalendarOutlined, 'Бронирования', true),
+      item('schedule', CalendarOutlined, 'Расписание', true),
     )
+    items.push(group('Управление', mgmtItems))
   }
 
   if (isAdmin.value) {
