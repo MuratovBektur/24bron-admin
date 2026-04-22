@@ -55,9 +55,7 @@ watch(selectedComplexId, async (id) => {
   }
 })
 
-const complexOptions = computed(() =>
-  complexes.value.map((c) => ({ label: c.name, value: c.id })),
-)
+const complexOptions = computed(() => complexes.value.map((c) => ({ label: c.name, value: c.id })))
 
 function pitchTypeLabel(t: string) {
   if (t === 'open') return 'Открытое'
@@ -102,12 +100,7 @@ function goToPitch(p: Pitch) {
         <a-spin :spinning="loadingPitches">
           <!-- Pitch grid -->
           <div v-if="pitches.length" class="pitches-grid">
-            <button
-              v-for="p in pitches"
-              :key="p.id"
-              class="pitch-card"
-              @click="goToPitch(p)"
-            >
+            <button v-for="p in pitches" :key="p.id" class="pitch-card" @click="goToPitch(p)">
               <div class="pitch-card__top">
                 <span class="pitch-card__name">{{ p.name }}</span>
                 <a-tag :bordered="false" color="blue">{{ pitchTypeLabel(p.type) }}</a-tag>
@@ -124,15 +117,24 @@ function goToPitch(p: Pitch) {
           </div>
 
           <!-- States -->
-          <div v-else-if="!loading && !loadingPitches && isAdmin && !selectedComplexId" class="bookings-select__hint">
+          <div
+            v-else-if="!loading && !loadingPitches && isAdmin && !selectedComplexId"
+            class="bookings-select__hint"
+          >
             Выберите комплекс для просмотра полей
           </div>
 
-          <div v-else-if="!loading && !loadingPitches && !isAdmin && !ownerComplex" class="bookings-select__empty">
+          <div
+            v-else-if="!loading && !loadingPitches && !isAdmin && !ownerComplex"
+            class="bookings-select__empty"
+          >
             <a-empty description="Вам не назначен комплекс" />
           </div>
 
-          <div v-else-if="!loading && !loadingPitches && selectedComplexId && !pitches.length" class="bookings-select__empty">
+          <div
+            v-else-if="!loading && !loadingPitches && selectedComplexId && !pitches.length"
+            class="bookings-select__empty"
+          >
             <a-empty description="В этом комплексе нет полей" />
           </div>
         </a-spin>
@@ -142,8 +144,6 @@ function goToPitch(p: Pitch) {
 </template>
 
 <style lang="scss" scoped>
-@use '@/assets/styles/variables' as *;
-
 .bookings-select {
   background: $bg-body;
   min-height: calc(100vh - 56px);

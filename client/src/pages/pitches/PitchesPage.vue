@@ -427,12 +427,7 @@ onMounted(async () => {
           </div>
           <div v-if="!editingId" class="modal-form__field modal-form__field--qty">
             <label class="modal-form__label">Количество</label>
-            <a-input-number
-              v-model:value="form.quantity"
-              :min="1"
-              :max="20"
-              style="width: 100%"
-            />
+            <a-input-number v-model:value="form.quantity" :min="1" :max="20" style="width: 100%" />
           </div>
         </div>
 
@@ -608,8 +603,6 @@ onMounted(async () => {
 </template>
 
 <style lang="scss" scoped>
-@use '@/assets/styles/variables' as *;
-
 .pitches-page {
   background: $bg-body;
   min-height: calc(100vh - 56px);

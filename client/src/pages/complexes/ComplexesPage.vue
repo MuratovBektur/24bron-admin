@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { PlusOutlined, PhoneOutlined, EnvironmentOutlined, LinkOutlined, EditOutlined, RightOutlined } from '@ant-design/icons-vue'
+import {
+  PlusOutlined,
+  PhoneOutlined,
+  EnvironmentOutlined,
+  LinkOutlined,
+  EditOutlined,
+  RightOutlined,
+} from '@ant-design/icons-vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -181,7 +188,13 @@ onMounted(loadComplexes)
               </div>
               <div class="complex-card__row">
                 <LinkOutlined class="complex-card__icon" />
-                <a :href="c.map_link" target="_blank" rel="noopener" class="complex-card__link" @click.stop>
+                <a
+                  :href="c.map_link"
+                  target="_blank"
+                  rel="noopener"
+                  class="complex-card__link"
+                  @click.stop
+                >
                   2ГИС
                 </a>
               </div>
@@ -246,8 +259,6 @@ onMounted(loadComplexes)
 </template>
 
 <style lang="scss" scoped>
-@use '@/assets/styles/variables' as *;
-
 .complexes {
   background: $bg-body;
   min-height: calc(100vh - 56px);
@@ -297,7 +308,9 @@ onMounted(loadComplexes)
   flex-direction: column;
   gap: 12px;
   cursor: pointer;
-  transition: box-shadow 0.2s, transform 0.15s;
+  transition:
+    box-shadow 0.2s,
+    transform 0.15s;
 
   &:hover {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);

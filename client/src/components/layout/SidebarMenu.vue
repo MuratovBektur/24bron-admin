@@ -150,8 +150,6 @@ function handleClick(key: string) {
 </template>
 
 <style lang="scss" scoped>
-@use '@/assets/styles/variables' as *;
-
 $w: 240px;
 $w-sm: 48px;
 $bg: #001529;

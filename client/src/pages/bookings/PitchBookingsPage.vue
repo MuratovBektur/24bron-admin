@@ -192,7 +192,7 @@ interface FormState {
 
 const emptyForm = (date?: Dayjs, hour?: number): FormState => ({
   client_name: '',
-  client_phone: '',
+  client_phone: '+996',
   date: date ?? dayjs(),
   start_time: hour !== undefined ? dayjs().hour(hour).minute(0).second(0) : null,
   end_time:
@@ -704,8 +704,6 @@ onMounted(async () => {
 </template>
 
 <style lang="scss" scoped>
-@use '@/assets/styles/variables' as *;
-
 .pb-page {
   background: $bg-body;
   min-height: calc(100vh - 56px);

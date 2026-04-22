@@ -107,8 +107,6 @@ async function handleLogin() {
 </template>
 
 <style lang="scss" scoped>
-@use '@/assets/styles/variables' as *;
-
 .login-page {
   min-height: 100vh;
   display: flex;

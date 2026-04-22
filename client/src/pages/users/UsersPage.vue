@@ -319,8 +319,6 @@ onMounted(async () => {
 </template>
 
 <style lang="scss" scoped>
-@use '@/assets/styles/variables' as *;
-
 .users-page {
   background: $bg-body;
   min-height: calc(100vh - 56px);

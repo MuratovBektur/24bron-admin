@@ -27,9 +27,7 @@ async function handleLogout() {
 
       <template #overlay>
         <a-menu>
-          <a-menu-item key="settings" disabled>
-            <SettingOutlined /> Настройки
-          </a-menu-item>
+          <a-menu-item key="settings" disabled> <SettingOutlined /> Настройки </a-menu-item>
           <a-menu-divider />
           <a-menu-item key="logout" class="header__logout" @click="handleLogout">
             <LogoutOutlined /> Выйти
@@ -41,8 +39,6 @@ async function handleLogout() {
 </template>
 
 <style lang="scss" scoped>
-@use '@/assets/styles/variables' as *;
-
 .header {
   height: 56px;
   background: #fff;
@@ -64,10 +60,14 @@ async function handleLogout() {
     border-radius: $radius-sm;
     transition: background 0.25s ease;
 
-    &:hover { background: $bg-body; }
+    &:hover {
+      background: $bg-body;
+    }
   }
 
-  &__info { text-align: right; }
+  &__info {
+    text-align: right;
+  }
 
   &__name {
     font-size: 13px;

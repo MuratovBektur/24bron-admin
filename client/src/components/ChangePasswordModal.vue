@@ -84,8 +84,6 @@ async function handleSubmit() {
 </template>
 
 <style lang="scss" scoped>
-@use '@/assets/styles/variables' as *;
-
 .cp-modal {
   padding: 8px 4px 4px;
   text-align: center;
