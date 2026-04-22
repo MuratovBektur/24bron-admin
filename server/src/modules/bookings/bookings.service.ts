@@ -1,4 +1,10 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, FindOptionsWhere, Repository } from 'typeorm';
 import { Booking, BookingStatus } from '../../entities/booking.entity';
@@ -6,13 +12,51 @@ import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 
 @Injectable()
-export class BookingsService {
+export class BookingsService implements OnModuleInit {
+  private readonly logger = new Logger(BookingsService.name);
+
   constructor(
     @InjectRepository(Booking)
     private readonly repo: Repository<Booking>,
   ) {}
 
-  private computeStatus(paidAmount: number | null, price: number): BookingStatus {
+  async onModuleInit() {
+    await this.repo.query(`
+      CREATE OR REPLACE FUNCTION check_booking_overlap()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM bookings
+          WHERE pitch_id = NEW.pitch_id
+            AND id != COALESCE(NEW.id, '00000000-0000-0000-0000-000000000000'::uuid)
+            AND start_time < NEW.end_time
+            AND end_time > NEW.start_time
+            AND (status != 'pending' OR pending_until IS NULL OR pending_until > NOW())
+        ) THEN
+          RAISE EXCEPTION 'Это время уже занято другим бронированием';
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+
+    await this.repo.query(`
+      DROP TRIGGER IF EXISTS booking_overlap_check ON bookings;
+    `);
+
+    await this.repo.query(`
+      CREATE TRIGGER booking_overlap_check
+      BEFORE INSERT OR UPDATE ON bookings
+      FOR EACH ROW EXECUTE FUNCTION check_booking_overlap();
+    `);
+
+    this.logger.log('Booking overlap trigger installed');
+  }
+
+  private computeStatus(
+    paidAmount: number | null,
+    price: number,
+  ): BookingStatus {
     if (paidAmount && paidAmount > 0) {
       return paidAmount >= price ? 'paid' : 'partial';
     }
@@ -28,12 +72,16 @@ export class BookingsService {
       where.start_time = Between(from, to);
     }
 
-    const bookings = await this.repo.find({ where, order: { start_time: 'ASC' } });
+    const bookings = await this.repo.find({
+      where,
+      order: { start_time: 'ASC' },
+    });
 
     // Filter out expired pending bookings
     const now = new Date();
     return bookings.filter(
-      (b) => !(b.status === 'pending' && b.pending_until && b.pending_until < now),
+      (b) =>
+        !(b.status === 'pending' && b.pending_until && b.pending_until < now),
     );
   }
 
@@ -86,11 +134,20 @@ export class BookingsService {
     return this.repo.save(booking);
   }
 
-  async update(pitchId: string, id: string, dto: UpdateBookingDto): Promise<Booking> {
-    const booking = await this.repo.findOne({ where: { id }, relations: ['pitch'] });
+  async update(
+    pitchId: string,
+    id: string,
+    dto: UpdateBookingDto,
+  ): Promise<Booking> {
+    const booking = await this.repo.findOne({
+      where: { id },
+      relations: ['pitch'],
+    });
     if (!booking) throw new NotFoundException('Бронирование не найдено');
 
-    const newStart = dto.start_time ? new Date(dto.start_time) : booking.start_time;
+    const newStart = dto.start_time
+      ? new Date(dto.start_time)
+      : booking.start_time;
     const newEnd = dto.end_time ? new Date(dto.end_time) : booking.end_time;
 
     if (dto.start_time || dto.end_time) {
@@ -98,18 +155,23 @@ export class BookingsService {
     }
 
     if (dto.client_name !== undefined) booking.client_name = dto.client_name;
-    if (dto.client_phone !== undefined) booking.client_phone = dto.client_phone ?? null;
+    if (dto.client_phone !== undefined)
+      booking.client_phone = dto.client_phone ?? null;
     if (dto.start_time !== undefined) booking.start_time = newStart;
     if (dto.end_time !== undefined) booking.end_time = newEnd;
     if (dto.notes !== undefined) booking.notes = dto.notes ?? null;
     if (dto.pending_until !== undefined)
-      booking.pending_until = dto.pending_until ? new Date(dto.pending_until) : null;
+      booking.pending_until = dto.pending_until
+        ? new Date(dto.pending_until)
+        : null;
 
     const newPrice = dto.price ?? Number(booking.price);
     if (dto.price !== undefined) booking.price = newPrice;
 
     const newPaid =
-      dto.paid_amount !== undefined ? (dto.paid_amount ?? null) : booking.paid_amount;
+      dto.paid_amount !== undefined
+        ? (dto.paid_amount ?? null)
+        : booking.paid_amount;
     if (dto.paid_amount !== undefined) booking.paid_amount = newPaid;
 
     booking.status = this.computeStatus(
@@ -122,7 +184,8 @@ export class BookingsService {
 
   async deleteById(id: string): Promise<{ deleted: true }> {
     const result = await this.repo.delete(id);
-    if (!result.affected) throw new NotFoundException('Бронирование не найдено');
+    if (!result.affected)
+      throw new NotFoundException('Бронирование не найдено');
     return { deleted: true };
   }
 }

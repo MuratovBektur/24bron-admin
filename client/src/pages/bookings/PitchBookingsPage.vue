@@ -341,8 +341,7 @@ async function handleSubmit() {
     modalOpen.value = false
     await loadWeek()
   } catch (e: unknown) {
-    const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
-    message.error(msg ?? 'Произошла ошибка')
+    message.error(extractErrorMessage(e))
   } finally {
     submitting.value = false
   }
@@ -374,14 +373,23 @@ async function confirmDelete() {
     modalOpen.value = false
     await loadWeek()
     message.success('Бронирование удалено')
-  } catch {
-    message.error('Не удалось удалить бронирование')
+  } catch (e: unknown) {
+    message.error(extractErrorMessage(e))
   } finally {
     deleting.value = false
   }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────
+function extractErrorMessage(e: unknown): string {
+  const defaultMsg = 'Неизвестная ошибка, попробуйте позже'
+  const raw = (e as { response?: { data?: { message?: unknown } } })?.response?.data?.message
+  if (Array.isArray(raw)) return raw.join(', ')
+  if (raw === 'Internal server error') return defaultMsg
+  if (typeof raw === 'string' && raw.trim()) return raw
+  return defaultMsg
+}
+
 function bookingHash(id: string): string {
   return '#' + id.slice(0, 6).toUpperCase()
 }
