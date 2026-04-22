@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeftOutlined,
@@ -84,6 +84,24 @@ function hourLabel(h: number): string {
 
 // ─── Bookings by day ──────────────────────────────────────────────
 const bookingsByDay = ref<Record<string, Booking[]>>({})
+let pendingTimer: ReturnType<typeof setTimeout> | null = null
+
+function schedulePendingRefresh(map: Record<string, Booking[]>) {
+  if (pendingTimer !== null) clearTimeout(pendingTimer)
+  const now = Date.now()
+  let nearest = Infinity
+  for (const bookings of Object.values(map)) {
+    for (const b of bookings) {
+      if (b.status === 'pending' && b.pending_until) {
+        const ms = new Date(b.pending_until).getTime() - now
+        if (ms > 0 && ms < nearest) nearest = ms
+      }
+    }
+  }
+  if (nearest < Infinity) {
+    pendingTimer = setTimeout(() => loadWeek(), nearest + 500)
+  }
+}
 
 async function loadWeek() {
   loadingBookings.value = true
@@ -98,12 +116,17 @@ async function loadWeek() {
       map[d.format('YYYY-MM-DD')] = results[i] ?? []
     })
     bookingsByDay.value = map
+    schedulePendingRefresh(map)
   } catch {
     message.error('Не удалось загрузить бронирования')
   } finally {
     loadingBookings.value = false
   }
 }
+
+onUnmounted(() => {
+  if (pendingTimer !== null) clearTimeout(pendingTimer)
+})
 
 watch(weekStart, loadWeek)
 

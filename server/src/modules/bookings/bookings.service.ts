@@ -43,11 +43,16 @@ export class BookingsService {
     endTime: Date,
     excludeId?: string,
   ): Promise<void> {
+    const now = new Date();
     const qb = this.repo
       .createQueryBuilder('b')
       .where('b.pitch_id = :pitchId', { pitchId })
       .andWhere('b.start_time < :endTime', { endTime })
-      .andWhere('b.end_time > :startTime', { startTime });
+      .andWhere('b.end_time > :startTime', { startTime })
+      .andWhere(
+        "(b.status != 'pending' OR b.pending_until IS NULL OR b.pending_until > :now)",
+        { now },
+      );
 
     if (excludeId) {
       qb.andWhere('b.id != :excludeId', { excludeId });
