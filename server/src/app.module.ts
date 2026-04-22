@@ -9,6 +9,7 @@ import { RolesModule } from './modules/roles/roles.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ComplexesModule } from './modules/complexes/complexes.module';
 import { PitchesModule } from './modules/pitches/pitches.module';
+import { BookingsModule } from './modules/bookings/bookings.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { PitchesModule } from './modules/pitches/pitches.module';
     AuthModule,
     ComplexesModule,
     PitchesModule,
+    BookingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

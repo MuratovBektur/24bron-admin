@@ -70,3 +70,8 @@ export async function apiUpdatePitch(
 export async function apiDeletePitch(complexId: string, id: string): Promise<void> {
   await api.delete(`/complexes/${complexId}/pitches/${id}`)
 }
+
+export async function apiGetPitchById(pitchId: string): Promise<Pitch & { complex: { id: string; name: string } }> {
+  const { data } = await api.get(`/pitches/${pitchId}`)
+  return data
+}

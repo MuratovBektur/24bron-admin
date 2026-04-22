@@ -61,7 +61,7 @@ const menuItems = computed((): (MenuItem | MenuGroup)[] => {
     const mgmtItems: MenuItem[] = []
     if (isAdmin.value) mgmtItems.push(item('complexes', AppstoreOutlined, 'Комплексы'))
     mgmtItems.push(
-      item('bookings', CalendarOutlined, 'Бронирования', true),
+      item('bookings', CalendarOutlined, 'Бронирования'),
       item('schedule', CalendarOutlined, 'Расписание', true),
     )
     items.push(group('Управление', mgmtItems))
@@ -93,6 +93,7 @@ function handleClick(key: string) {
     home: 'home',
     complexes: 'complexes',
     users: 'users',
+    bookings: 'bookings',
   }
   if (routes[key]) router.push({ name: routes[key] })
 }

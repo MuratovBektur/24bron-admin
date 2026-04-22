@@ -39,4 +39,13 @@ export class PitchesService {
       order: { created_at: 'ASC' },
     });
   }
+
+  async findById(id: string): Promise<Pitch> {
+    const pitch = await this.repo.findOne({
+      where: { id },
+      relations: ['complex'],
+    });
+    if (!pitch) throw new NotFoundException('Поле не найдено');
+    return pitch;
+  }
 }

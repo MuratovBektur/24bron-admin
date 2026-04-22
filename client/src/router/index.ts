@@ -40,6 +40,16 @@ const router = createRouter({
           component: () => import('@/pages/pitches/PitchesPage.vue'),
           meta: { roles: ['super_admin', 'admin'] },
         },
+        {
+          path: 'bookings',
+          name: 'bookings',
+          component: () => import('@/pages/bookings/BookingsPage.vue'),
+        },
+        {
+          path: 'bookings/pitch/:pitchId',
+          name: 'pitch-bookings',
+          component: () => import('@/pages/bookings/PitchBookingsPage.vue'),
+        },
       ],
     },
     {

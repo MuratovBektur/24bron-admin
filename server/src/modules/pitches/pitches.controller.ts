@@ -23,7 +23,9 @@ import { Roles } from '../auth/roles.decorator';
 export class PitchesController {
   constructor(private readonly service: PitchesService) {}
 
+  // Owners can read their own complex's pitches
   @Get()
+  @Roles('super_admin', 'admin', 'owner', 'owner_assistant')
   findAll(@Param('complexId') complexId: string) {
     return this.service.findByComplex(complexId);
   }
@@ -42,5 +44,17 @@ export class PitchesController {
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteById(@Param('id') id: string) {
     return this.service.deleteById(id);
+  }
+}
+
+@Controller('pitches')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('super_admin', 'admin', 'owner', 'owner_assistant')
+export class PitchDetailController {
+  constructor(private readonly service: PitchesService) {}
+
+  @Get(':id')
+  findById(@Param('id') id: string) {
+    return this.service.findById(id);
   }
 }
