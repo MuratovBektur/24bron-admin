@@ -17,10 +17,13 @@ import { UpdateBookingDto } from './dto/update-booking.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { ComplexAccessGuard } from '../auth/complex-access.guard';
+import { CheckComplexAccess } from '../auth/complex-access.decorator';
 
 @Controller('pitches/:pitchId/bookings')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, ComplexAccessGuard)
 @Roles('super_admin', 'admin', 'owner', 'owner_assistant')
+@CheckComplexAccess('pitch')
 export class BookingsController {
   constructor(private readonly service: BookingsService) {}
 
@@ -35,7 +38,11 @@ export class BookingsController {
   }
 
   @Patch(':id')
-  update(@Param('pitchId') pitchId: string, @Param('id') id: string, @Body() dto: UpdateBookingDto) {
+  update(
+    @Param('pitchId') pitchId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateBookingDto,
+  ) {
     return this.service.update(pitchId, id, dto);
   }
 

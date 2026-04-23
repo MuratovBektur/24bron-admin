@@ -12,6 +12,7 @@ import {
   ADMIN_ASSIGNABLE_ROLES,
 } from '../../entities/user-role.entity';
 import { Complex } from '../../entities/complex.entity';
+import { OwnerStaff } from '../../entities/owner-staff.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -24,6 +25,8 @@ export class UsersService {
     private readonly rolesRepo: Repository<UserRole>,
     @InjectRepository(Complex)
     private readonly complexRepo: Repository<Complex>,
+    @InjectRepository(OwnerStaff)
+    private readonly ownerStaffRepo: Repository<OwnerStaff>,
   ) {}
 
   async findAll(): Promise<User[]> {
@@ -38,10 +41,19 @@ export class UsersService {
       throw new BadRequestException('Недопустимая роль');
     }
 
-    const exists = await this.usersRepo.findOneBy({ email: dto.email });
-    if (exists)
+    const account_with_same_email = await this.usersRepo.findOneBy({
+      email: dto.email,
+    });
+    if (account_with_same_email)
       throw new BadRequestException(
         'Пользователь с таким email уже существует',
+      );
+    const account_with_same_phone = await this.usersRepo.findOneBy({
+      phone: dto.phone,
+    });
+    if (account_with_same_phone)
+      throw new BadRequestException(
+        'Пользователь с таким телефоном уже существует',
       );
 
     const role = await this.rolesRepo.findOneBy({ name: dto.role });
@@ -118,6 +130,17 @@ export class UsersService {
   async getOwnerComplex(userId: string): Promise<Complex | null> {
     return this.complexRepo.findOne({
       where: { owner: { id: userId } },
+    });
+  }
+
+  async getAssistantComplex(assistantId: string): Promise<Complex | null> {
+    const staff = await this.ownerStaffRepo.findOne({
+      where: { assistant: { id: assistantId } },
+      relations: ['owner'],
+    });
+    if (!staff) return null;
+    return this.complexRepo.findOne({
+      where: { owner: { id: staff.owner.id } },
     });
   }
 }

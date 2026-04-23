@@ -50,7 +50,14 @@ export class UsersController {
   }
 
   @Get(':id/complex')
-  getOwnerComplex(@Param('id') userId: string) {
-    return this.service.getOwnerComplex(userId);
+  @Roles('super_admin', 'admin', 'owner', 'owner_assistant')
+  getOwnerComplex(@Param('id') userId: string, @Request() req: JwtRequest) {
+    const roles: string[] = req.user.roles ?? [];
+    if (roles.includes('owner_assistant')) {
+      return this.service.getAssistantComplex(req.user.userId);
+    }
+    // owner: enforce own id; admin/super_admin: use param as-is
+    const resolvedId = roles.includes('owner') ? req.user.userId : userId;
+    return this.service.getOwnerComplex(resolvedId);
   }
 }

@@ -16,6 +16,8 @@ import { UpdatePitchDto } from './dto/update-pitch.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { ComplexAccessGuard } from '../auth/complex-access.guard';
+import { CheckComplexAccess } from '../auth/complex-access.decorator';
 
 @Controller('complexes/:complexId/pitches')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -23,9 +25,10 @@ import { Roles } from '../auth/roles.decorator';
 export class PitchesController {
   constructor(private readonly service: PitchesService) {}
 
-  // Owners can read their own complex's pitches
   @Get()
   @Roles('super_admin', 'admin', 'owner', 'owner_assistant')
+  @CheckComplexAccess('complex')
+  @UseGuards(JwtAuthGuard, RolesGuard, ComplexAccessGuard)
   findAll(@Param('complexId') complexId: string) {
     return this.service.findByComplex(complexId);
   }
@@ -48,8 +51,9 @@ export class PitchesController {
 }
 
 @Controller('pitches')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, ComplexAccessGuard)
 @Roles('super_admin', 'admin', 'owner', 'owner_assistant')
+@CheckComplexAccess('pitch')
 export class PitchDetailController {
   constructor(private readonly service: PitchesService) {}
 
