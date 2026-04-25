@@ -147,7 +147,7 @@ onMounted(loadComplexes)
     <div class="complexes__inner">
       <div class="complexes__head">
         <h1 class="complexes__title">Комплексы</h1>
-        <a-button type="primary" @click="openCreate">
+        <a-button type="primary" class="complexes__add-btn" @click="openCreate">
           <template #icon><PlusOutlined /></template>
           Добавить комплекс
         </a-button>
@@ -264,6 +264,10 @@ onMounted(loadComplexes)
   min-height: calc(100vh - 56px);
   padding: 32px 24px;
 
+  @media (max-width: 768px) {
+    padding: 16px 12px;
+  }
+
   &__inner {
     max-width: 1200px;
     margin: 0 auto;
@@ -274,6 +278,13 @@ onMounted(loadComplexes)
     align-items: center;
     justify-content: space-between;
     margin-bottom: 24px;
+    gap: 12px;
+
+    @media (max-width: 480px) {
+      flex-direction: column;
+      align-items: stretch;
+      margin-bottom: 16px;
+    }
   }
 
   &__title {
@@ -281,12 +292,27 @@ onMounted(loadComplexes)
     font-weight: 700;
     color: $text-primary;
     margin: 0;
+
+    @media (max-width: 480px) {
+      font-size: 18px;
+    }
   }
 
   &__grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 16px;
+
+    @media (max-width: 600px) {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+  }
+
+  &__add-btn {
+    @media (max-width: 480px) {
+      width: 100%;
+    }
   }
 
   &__empty {
@@ -296,6 +322,10 @@ onMounted(loadComplexes)
     padding: 64px 24px;
     display: flex;
     justify-content: center;
+
+    @media (max-width: 480px) {
+      padding: 40px 16px;
+    }
   }
 }
 
@@ -312,9 +342,22 @@ onMounted(loadComplexes)
     box-shadow 0.2s,
     transform 0.15s;
 
+  @media (max-width: 600px) {
+    padding: 16px;
+    border-radius: $radius-md;
+    gap: 10px;
+  }
+
   &:hover {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
     transform: translateY(-2px);
+  }
+
+  @media (hover: none) {
+    &:active {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      transform: translateY(-1px);
+    }
   }
 
   &__header {
@@ -329,17 +372,25 @@ onMounted(loadComplexes)
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+    min-width: 0;
   }
 
   &__name {
     font-size: 16px;
     font-weight: 600;
     color: $text-primary;
+    word-break: break-word;
+
+    @media (max-width: 600px) {
+      font-size: 15px;
+    }
   }
 
   &__edit {
     flex-shrink: 0;
     color: $text-secondary;
+    min-width: 32px;
+    min-height: 32px;
   }
 
   &__info {
@@ -351,15 +402,17 @@ onMounted(loadComplexes)
 
   &__row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     color: $text-secondary;
     font-size: 14px;
+    word-break: break-word;
   }
 
   &__icon {
     flex-shrink: 0;
     color: $text-secondary;
+    margin-top: 2px;
   }
 
   &__link {
@@ -376,6 +429,7 @@ onMounted(loadComplexes)
     font-size: 13px;
     color: $text-secondary;
     line-height: 1.5;
+    word-break: break-word;
   }
 
   &__footer {
@@ -433,5 +487,18 @@ onMounted(loadComplexes)
 
 .req {
   color: #ff4d4f;
+}
+</style>
+
+<style lang="scss">
+@media (max-width: 600px) {
+  .ant-modal {
+    max-width: calc(100vw - 24px) !important;
+    margin: 12px auto !important;
+  }
+
+  .ant-modal-content {
+    border-radius: 12px !important;
+  }
 }
 </style>
