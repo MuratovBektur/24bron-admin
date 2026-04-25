@@ -9,6 +9,7 @@ import {
   DeleteOutlined,
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
+import { useMediaQuery } from '@vueuse/core'
 import dayjs, { type Dayjs } from 'dayjs'
 import 'dayjs/locale/ru'
 import { apiGetPitchById, type Pitch } from '@/api/pitches'
@@ -31,30 +32,56 @@ const pitch = ref<(Pitch & { complex: { id: string; name: string } }) | null>(nu
 const loading = ref(true)
 const loadingBookings = ref(false)
 
-// ─── Week navigation ───────────────────────────────────────────────
-function currentMonday(): Dayjs {
-  const d = dayjs().startOf('day')
-  return d.subtract((d.day() + 6) % 7, 'day')
-}
-
-const weekStart = ref(currentMonday())
+// ─── Day window ────────────────────────────────────────────────────
 const today = dayjs().startOf('day')
 
-const days = computed(() => Array.from({ length: 7 }, (_, i) => weekStart.value.add(i, 'day')))
+const isXs = useMediaQuery('(max-width: 479px)')
+const isSm = useMediaQuery('(max-width: 639px)')
+const isMd = useMediaQuery('(max-width: 899px)')
+const isLg = useMediaQuery('(max-width: 1099px)')
 
-function prevWeek() {
-  weekStart.value = weekStart.value.subtract(7, 'day')
-}
-function nextWeek() {
-  weekStart.value = weekStart.value.add(7, 'day')
-}
-
-const weekLabel = computed(() => {
-  const from = days.value[0]!
-  const to = days.value[6]!
-  if (from.month() === to.month()) return `${from.format('D')} – ${to.format('D MMMM YYYY')}`
-  return `${from.format('D MMM')} – ${to.format('D MMM YYYY')}`
+const visibleDaysCount = computed(() => {
+  if (isXs.value) return 1
+  if (isSm.value) return 2
+  if (isMd.value) return 3
+  if (isLg.value) return 5
+  return 7
 })
+
+function anchoredDate(count: number): Dayjs {
+  // 1 день  → сегодня
+  // 2 дня   → сегодня, завтра
+  // 3+ дней → вчера, сегодня, завтра, ...
+  const offset = count >= 3 ? 1 : 0
+  return today.subtract(offset, 'day')
+}
+
+const windowDate = ref(anchoredDate(visibleDaysCount.value))
+
+const displayedDays = computed(() =>
+  Array.from({ length: visibleDaysCount.value }, (_, i) => windowDate.value.add(i, 'day')),
+)
+
+const windowLabel = computed(() => {
+  const count = visibleDaysCount.value
+  const first = displayedDays.value[0]!
+  const last = displayedDays.value[count - 1]!
+  if (count === 1) return first.format('dddd, D MMMM YYYY')
+  if (first.month() === last.month()) return `${first.format('D')} – ${last.format('D MMMM YYYY')}`
+  return `${first.format('D MMM')} – ${last.format('D MMM YYYY')}`
+})
+
+watch(visibleDaysCount, (count) => {
+  windowDate.value = anchoredDate(count)
+})
+
+function prevWindow() {
+  windowDate.value = windowDate.value.subtract(1, 'day')
+}
+
+function nextWindow() {
+  windowDate.value = windowDate.value.add(1, 'day')
+}
 
 // ─── Working hours ────────────────────────────────────────────────
 const startHour = computed(() => {
@@ -99,24 +126,25 @@ function schedulePendingRefresh(map: Record<string, Booking[]>) {
     }
   }
   if (nearest < Infinity) {
-    pendingTimer = setTimeout(() => loadWeek(), nearest + 500)
+    pendingTimer = setTimeout(() => refreshDisplayed(), nearest + 500)
   }
 }
 
-async function loadWeek() {
+const loadedDates = new Set<string>()
+
+async function ensureDaysLoaded(dates: string[]) {
+  const missing = dates.filter((d) => !loadedDates.has(d))
+  if (!missing.length) return
   loadingBookings.value = true
   try {
-    // Load 8 days to cover pitches that cross midnight (e.g. 22:00–02:00)
-    const daysToLoad = Array.from({ length: 8 }, (_, i) => weekStart.value.add(i, 'day'))
-    const results = await Promise.all(
-      daysToLoad.map((d) => apiGetBookings(pitchId, d.format('YYYY-MM-DD'))),
-    )
-    const map: Record<string, Booking[]> = {}
-    daysToLoad.forEach((d, i) => {
-      map[d.format('YYYY-MM-DD')] = results[i] ?? []
+    const results = await Promise.all(missing.map((d) => apiGetBookings(pitchId, d)))
+    const updated = { ...bookingsByDay.value }
+    missing.forEach((d, i) => {
+      updated[d] = results[i] ?? []
+      loadedDates.add(d)
     })
-    bookingsByDay.value = map
-    schedulePendingRefresh(map)
+    bookingsByDay.value = updated
+    schedulePendingRefresh(bookingsByDay.value)
   } catch {
     message.error('Не удалось загрузить бронирования')
   } finally {
@@ -124,11 +152,31 @@ async function loadWeek() {
   }
 }
 
+async function refreshDisplayed() {
+  const shown = displayedDays.value
+  const dates = [
+    ...shown.map((d) => d.format('YYYY-MM-DD')),
+    shown[shown.length - 1]!.add(1, 'day').format('YYYY-MM-DD'),
+  ]
+  dates.forEach((d) => loadedDates.delete(d))
+  await ensureDaysLoaded(dates)
+}
+
+watch(
+  () => displayedDays.value.map((d) => d.format('YYYY-MM-DD')).join(','),
+  async (datesStr) => {
+    const dates = datesStr.split(',')
+    const extra = displayedDays.value[displayedDays.value.length - 1]!.add(1, 'day').format(
+      'YYYY-MM-DD',
+    )
+    await ensureDaysLoaded([...dates, extra])
+  },
+  { immediate: true },
+)
+
 onUnmounted(() => {
   if (pendingTimer !== null) clearTimeout(pendingTimer)
 })
-
-watch(weekStart, loadWeek)
 
 // ─── Grid helpers ─────────────────────────────────────────────────
 function getBookingAtHour(day: Dayjs, hour: number): Booking | null {
@@ -339,7 +387,7 @@ async function handleSubmit() {
       message.success('Бронирование добавлено')
     }
     modalOpen.value = false
-    await loadWeek()
+    await refreshDisplayed()
   } catch (e: unknown) {
     message.error(extractErrorMessage(e))
   } finally {
@@ -371,7 +419,7 @@ async function confirmDelete() {
     await apiDeleteBooking(pitchId, deletingBooking.value.id)
     deleteModalOpen.value = false
     modalOpen.value = false
-    await loadWeek()
+    await refreshDisplayed()
     message.success('Бронирование удалено')
   } catch (e: unknown) {
     message.error(extractErrorMessage(e))
@@ -407,7 +455,7 @@ function formatTime(iso: string) {
 onMounted(async () => {
   try {
     pitch.value = await apiGetPitchById(pitchId)
-    await loadWeek()
+    await refreshDisplayed()
   } catch {
     message.error('Не удалось загрузить данные поля')
     router.push({ name: 'bookings' })
@@ -447,18 +495,18 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Week navigation -->
+          <!-- Navigation -->
           <div class="pb-weekbar">
             <div class="pb-weekbar__nav">
-              <a-button type="text" size="small" @click="prevWeek">
+              <a-button type="text" size="small" @click="prevWindow">
                 <template #icon><LeftOutlined /></template>
               </a-button>
-              <span class="pb-weekbar__label">{{ weekLabel }}</span>
-              <a-button type="text" size="small" @click="nextWeek">
+              <span class="pb-weekbar__label">{{ windowLabel }}</span>
+              <a-button type="text" size="small" @click="nextWindow">
                 <template #icon><RightOutlined /></template>
               </a-button>
             </div>
-            <a-button type="primary" @click="openCreate()">
+            <a-button type="primary" class="pb-weekbar__add-btn" @click="openCreate()">
               <template #icon><PlusOutlined /></template>
               Добавить
             </a-button>
@@ -475,13 +523,13 @@ onMounted(async () => {
           <!-- Schedule grid -->
           <a-spin :spinning="loadingBookings">
             <div class="sched-wrap">
-              <div class="sched">
+              <div class="sched" :style="{ '--cols': visibleDaysCount }">
                 <!-- Corner -->
                 <div class="sched__corner"></div>
 
                 <!-- Day headers -->
                 <div
-                  v-for="day in days"
+                  v-for="day in displayedDays"
                   :key="day.valueOf()"
                   class="sched__day-head"
                   :class="{
@@ -515,7 +563,7 @@ onMounted(async () => {
                   <div class="sched__hour">{{ hourLabel(hour) }}</div>
 
                   <div
-                    v-for="day in days"
+                    v-for="day in displayedDays"
                     :key="day.valueOf()"
                     class="sched__cell"
                     :class="[
@@ -709,6 +757,10 @@ onMounted(async () => {
   min-height: calc(100vh - 56px);
   padding: 24px;
 
+  @media (max-width: 768px) {
+    padding: 16px 12px;
+  }
+
   &__inner {
     max-width: 1200px;
     margin: 0 auto;
@@ -716,6 +768,10 @@ onMounted(async () => {
 
   &__head {
     margin-bottom: 12px;
+
+    @media (max-width: 768px) {
+      margin-bottom: 8px;
+    }
   }
 
   &__back {
@@ -738,12 +794,16 @@ onMounted(async () => {
 
   @media (max-width: 560px) {
     flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
   }
 
   &__title-row {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
     margin-bottom: 4px;
   }
 
@@ -752,6 +812,11 @@ onMounted(async () => {
     font-weight: 700;
     color: $text-primary;
     margin: 0;
+    word-break: break-word;
+
+    @media (max-width: 560px) {
+      font-size: 17px;
+    }
   }
 
   &__complex {
@@ -768,7 +833,9 @@ onMounted(async () => {
     flex-shrink: 0;
 
     @media (max-width: 560px) {
-      align-items: flex-start;
+      flex-direction: row;
+      align-items: center;
+      gap: 12px;
     }
   }
 
@@ -791,29 +858,60 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 10px;
-  flex-wrap: wrap;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
 
   &__nav {
     display: flex;
     align-items: center;
     gap: 4px;
+
+    @media (max-width: 480px) {
+      justify-content: center;
+    }
   }
 
   &__label {
     font-size: 15px;
     font-weight: 600;
     color: $text-primary;
-    min-width: 200px;
+    min-width: 180px;
     text-align: center;
+    text-transform: capitalize;
+
+    @media (max-width: 640px) {
+      min-width: unset;
+      font-size: 14px;
+    }
+  }
+
+  &__add-btn {
+    flex-shrink: 0;
+
+    @media (max-width: 480px) {
+      width: 100%;
+    }
   }
 }
 
 // ─── Legend ────────────────────────────────────────────────────────
 .pb-legend {
   display: flex;
-  gap: 16px;
+  gap: 10px 16px;
   margin-bottom: 12px;
   flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
 
   &__item {
     display: flex;
@@ -863,8 +961,7 @@ onMounted(async () => {
 
 .sched {
   display: grid;
-  grid-template-columns: 90px repeat(7, minmax(100px, 1fr));
-  min-width: 790px;
+  grid-template-columns: 80px repeat(var(--cols, 7), minmax(0, 1fr));
 
   &__corner {
     position: sticky;
@@ -968,7 +1065,7 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    padding: 0 10px;
+    padding: 0 8px;
     height: 52px;
     border-bottom: 1px solid #f0f0f0;
     border-right: 1px solid #e0e0e0;
@@ -1210,11 +1307,14 @@ onMounted(async () => {
   color: $primary;
 }
 
-@media (max-width: 400px) {
+@media (max-width: 600px) {
   :deep(.ant-modal) {
-    width: 92vw !important;
-    max-width: 92vw !important;
-    margin: 0 auto;
+    max-width: calc(100vw - 24px) !important;
+    margin: 12px auto !important;
+  }
+  :deep(.ant-modal-content) {
+    border-radius: 12px !important;
+    padding: 16px !important;
   }
 }
 
