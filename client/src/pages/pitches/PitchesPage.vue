@@ -337,7 +337,7 @@ onMounted(async () => {
               </div>
               <p class="pitches-page__address">{{ complex.address }}</p>
             </div>
-            <a-button type="primary" @click="openCreate">
+            <a-button type="primary" class="pitches-page__add-btn" @click="openCreate">
               <template #icon><PlusOutlined /></template>
               Добавить поле
             </a-button>
@@ -416,7 +416,7 @@ onMounted(async () => {
       :confirm-loading="submitting"
       ok-text="Сохранить"
       cancel-text="Отмена"
-      width="560px"
+      :width="560"
       @ok="handleSubmit"
     >
       <div class="modal-form">
@@ -608,6 +608,10 @@ onMounted(async () => {
   min-height: calc(100vh - 56px);
   padding: 32px 24px;
 
+  @media (max-width: 768px) {
+    padding: 16px 12px;
+  }
+
   &__inner {
     max-width: 1200px;
     margin: 0 auto;
@@ -615,6 +619,10 @@ onMounted(async () => {
 
   &__head {
     margin-bottom: 20px;
+
+    @media (max-width: 768px) {
+      margin-bottom: 12px;
+    }
   }
 
   &__back {
@@ -628,12 +636,19 @@ onMounted(async () => {
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 24px;
+
+    @media (max-width: 480px) {
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
   }
 
   &__title-row {
     display: flex;
     align-items: center;
     gap: 12px;
+    flex-wrap: wrap;
     margin-bottom: 4px;
   }
 
@@ -642,18 +657,37 @@ onMounted(async () => {
     font-weight: 700;
     color: $text-primary;
     margin: 0;
+    word-break: break-word;
+
+    @media (max-width: 480px) {
+      font-size: 18px;
+    }
   }
 
   &__address {
     font-size: 14px;
     color: $text-secondary;
     margin: 0;
+    word-break: break-word;
+  }
+
+  &__add-btn {
+    flex-shrink: 0;
+
+    @media (max-width: 480px) {
+      width: 100%;
+    }
   }
 
   &__grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 16px;
+
+    @media (max-width: 600px) {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
   }
 
   &__empty {
@@ -663,6 +697,10 @@ onMounted(async () => {
     padding: 64px 24px;
     display: flex;
     justify-content: center;
+
+    @media (max-width: 480px) {
+      padding: 40px 16px;
+    }
   }
 }
 
@@ -675,11 +713,21 @@ onMounted(async () => {
   flex-direction: column;
   gap: 12px;
 
+  @media (max-width: 600px) {
+    padding: 14px 16px;
+    border-radius: $radius-md;
+    gap: 10px;
+  }
+
   &__header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 8px;
+
+    @media (max-width: 600px) {
+      flex-wrap: wrap;
+    }
   }
 
   &__title-row {
@@ -687,12 +735,14 @@ onMounted(async () => {
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+    min-width: 0;
   }
 
   &__name {
     font-size: 15px;
     font-weight: 600;
     color: $text-primary;
+    word-break: break-word;
   }
 
   &__header-right {
@@ -700,11 +750,12 @@ onMounted(async () => {
     align-items: center;
     gap: 4px;
     flex-shrink: 0;
+    margin-left: auto;
   }
 
   &__stats {
     display: flex;
-    gap: 20px;
+    gap: 16px 20px;
     flex-wrap: wrap;
   }
 
@@ -712,6 +763,7 @@ onMounted(async () => {
     display: flex;
     flex-direction: column;
     gap: 2px;
+    min-width: 60px;
   }
 
   &__stat-label {
@@ -748,6 +800,7 @@ onMounted(async () => {
     font-size: 13px;
     color: $text-secondary;
     line-height: 1.5;
+    word-break: break-word;
   }
 }
 
@@ -917,13 +970,15 @@ onMounted(async () => {
 }
 </style>
 
-<style>
+<style lang="scss">
 @media (max-width: 600px) {
   .ant-modal {
     max-width: calc(100vw - 24px) !important;
     margin: 12px auto !important;
   }
+
   .ant-modal-content {
+    border-radius: 12px !important;
     padding: 16px !important;
   }
 }
