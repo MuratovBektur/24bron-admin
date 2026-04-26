@@ -28,6 +28,10 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
 
+    if (originalRequest.url === '/auth/login') {
+      return Promise.reject(error)
+    }
+
     const refreshToken =
       localStorage.getItem('refresh_token') ?? sessionStorage.getItem('refresh_token')
 

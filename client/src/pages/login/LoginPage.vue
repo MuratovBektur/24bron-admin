@@ -36,8 +36,10 @@ async function handleLogin() {
     loading.value = true
     await authStore.login(formState.email, formState.password, formState.remember)
     await router.push({ name: 'home' })
-  } catch (err) {
-    if (err instanceof Error) {
+  } catch (err: any) {
+    if (err?.response?.status === 401) {
+      message.error('Неправильный логин или пароль')
+    } else if (err instanceof Error) {
       message.error(err.message)
     }
   } finally {
