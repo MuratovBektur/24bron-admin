@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { PlusOutlined, EditOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
+import { useMediaQuery } from '@vueuse/core'
 import {
   apiGetUsers,
   apiCreateUser,
@@ -55,6 +56,9 @@ const roleOptions: { label: string; value: RoleName }[] = [
 ]
 
 const complexOptions = computed(() => complexes.value.map((c) => ({ label: c.name, value: c.id })))
+
+const isMobile = useMediaQuery('(max-width: 640px)')
+const modalWidth = computed(() => (isMobile.value ? '92vw' : '480px'))
 
 const showComplexField = computed(
   () => form.value.role === 'owner' || form.value.role === 'owner_assistant',
@@ -202,7 +206,7 @@ onMounted(async () => {
     <div class="users-page__inner">
       <div class="users-page__head">
         <h1 class="users-page__title">Пользователи</h1>
-        <a-button type="primary" @click="openCreate">
+        <a-button type="primary" class="users-page__head-btn" @click="openCreate">
           <template #icon><PlusOutlined /></template>
           Добавить пользователя
         </a-button>
@@ -249,7 +253,7 @@ onMounted(async () => {
       :confirm-loading="submitting"
       ok-text="Сохранить"
       cancel-text="Отмена"
-      width="480px"
+      :width="modalWidth"
       @ok="handleSubmit"
     >
       <div class="modal-form">
@@ -324,6 +328,10 @@ onMounted(async () => {
   min-height: calc(100vh - 56px);
   padding: 32px 24px;
 
+  @media (max-width: 768px) {
+    padding: 16px 12px;
+  }
+
   &__inner {
     max-width: 1000px;
     margin: 0 auto;
@@ -334,6 +342,13 @@ onMounted(async () => {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 24px;
+    gap: 12px;
+
+    @media (max-width: 480px) {
+      flex-direction: column;
+      align-items: stretch;
+      margin-bottom: 16px;
+    }
   }
 
   &__title {
@@ -341,6 +356,16 @@ onMounted(async () => {
     font-weight: 700;
     color: $text-primary;
     margin: 0;
+
+    @media (max-width: 480px) {
+      font-size: 18px;
+    }
+  }
+
+  &__head-btn {
+    @media (max-width: 480px) {
+      width: 100%;
+    }
   }
 
   &__empty {
@@ -350,6 +375,10 @@ onMounted(async () => {
     padding: 64px 24px;
     display: flex;
     justify-content: center;
+
+    @media (max-width: 480px) {
+      padding: 40px 16px;
+    }
   }
 }
 
@@ -392,21 +421,30 @@ onMounted(async () => {
 
     @media (max-width: 640px) {
       grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto auto;
       gap: 4px 12px;
       padding: 12px 16px;
 
+      .users-table__name {
+        grid-column: 1;
+        grid-row: 1;
+      }
       .users-table__email {
         grid-column: 1 / -1;
+        grid-row: 2;
         font-size: 12px;
       }
       & > :nth-child(3) {
         grid-column: 1;
+        grid-row: 3;
       }
       & > :nth-child(4) {
         grid-column: 2;
+        grid-row: 3;
       }
       .users-table__actions {
-        grid-column: 1 / -1;
+        grid-column: 2;
+        grid-row: 1;
         justify-content: flex-end;
       }
     }
