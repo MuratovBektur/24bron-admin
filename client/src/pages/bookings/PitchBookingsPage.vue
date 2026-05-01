@@ -12,6 +12,7 @@ import { message } from 'ant-design-vue'
 import { useMediaQuery } from '@vueuse/core'
 import dayjs, { type Dayjs } from 'dayjs'
 import 'dayjs/locale/ru'
+import { useBookingsSocket } from '@/composables/useBookingsSocket'
 import { apiGetPitchById, type Pitch } from '@/api/pitches'
 import {
   apiGetBookings,
@@ -111,24 +112,6 @@ function hourLabel(h: number): string {
 
 // ─── Bookings by day ──────────────────────────────────────────────
 const bookingsByDay = ref<Record<string, Booking[]>>({})
-let pendingTimer: ReturnType<typeof setTimeout> | null = null
-
-function schedulePendingRefresh(map: Record<string, Booking[]>) {
-  if (pendingTimer !== null) clearTimeout(pendingTimer)
-  const now = Date.now()
-  let nearest = Infinity
-  for (const bookings of Object.values(map)) {
-    for (const b of bookings) {
-      if (b.status === 'pending' && b.pending_until) {
-        const ms = new Date(b.pending_until).getTime() - now
-        if (ms > 0 && ms < nearest) nearest = ms
-      }
-    }
-  }
-  if (nearest < Infinity) {
-    pendingTimer = setTimeout(() => refreshDisplayed(), nearest + 500)
-  }
-}
 
 const loadedDates = new Set<string>()
 
@@ -144,7 +127,6 @@ async function ensureDaysLoaded(dates: string[]) {
       loadedDates.add(d)
     })
     bookingsByDay.value = updated
-    schedulePendingRefresh(bookingsByDay.value)
   } catch {
     message.error('Не удалось загрузить бронирования')
   } finally {
@@ -162,6 +144,38 @@ async function refreshDisplayed() {
   await ensureDaysLoaded(dates)
 }
 
+// ─── WebSocket real-time ──────────────────────────────────────────
+async function silentReloadDates(dates: string[]) {
+  try {
+    const results = await Promise.all(dates.map((d: string) => apiGetBookings(pitchId, d)))
+    const updated = { ...bookingsByDay.value }
+    dates.forEach((d: string, i: number) => {
+      updated[d] = results[i] ?? []
+      loadedDates.add(d)
+    })
+    bookingsByDay.value = updated
+  } catch {
+    // фоновое обновление — ошибки не показываем
+  }
+}
+
+function handleBookingChanged(dates: string[]) {
+  const visibleDates = new Set([
+    ...displayedDays.value.map((d: Dayjs) => d.format('YYYY-MM-DD')),
+    displayedDays.value[displayedDays.value.length - 1]!.add(1, 'day').format('YYYY-MM-DD'),
+  ])
+  const toReload = dates.filter((d: string) => visibleDates.has(d))
+  if (toReload.length) {
+    toReload.forEach((d: string) => loadedDates.delete(d))
+    void silentReloadDates(toReload)
+  }
+}
+
+const { connect: connectWs, disconnect: disconnectWs } = useBookingsSocket({
+  pitchId,
+  onBookingChanged: handleBookingChanged,
+})
+
 watch(
   () => displayedDays.value.map((d) => d.format('YYYY-MM-DD')).join(','),
   async (datesStr) => {
@@ -175,7 +189,7 @@ watch(
 )
 
 onUnmounted(() => {
-  if (pendingTimer !== null) clearTimeout(pendingTimer)
+  disconnectWs()
 })
 
 // ─── Grid helpers ─────────────────────────────────────────────────
@@ -456,6 +470,7 @@ onMounted(async () => {
   try {
     pitch.value = await apiGetPitchById(pitchId)
     await refreshDisplayed()
+    connectWs()
   } catch {
     message.error('Не удалось загрузить данные поля')
     router.push({ name: 'bookings' })
@@ -898,6 +913,7 @@ onMounted(async () => {
     }
   }
 }
+
 
 // ─── Legend ────────────────────────────────────────────────────────
 .pb-legend {

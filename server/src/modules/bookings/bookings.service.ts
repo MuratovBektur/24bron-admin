@@ -6,6 +6,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Between, FindOptionsWhere, Repository } from 'typeorm';
 import { Booking, BookingStatus } from '../../entities/booking.entity';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -50,7 +51,69 @@ export class BookingsService implements OnModuleInit {
       FOR EACH ROW EXECUTE FUNCTION check_booking_overlap();
     `);
 
-    this.logger.log('Booking overlap trigger installed');
+    await this.repo.query(`
+      CREATE OR REPLACE FUNCTION notify_booking_changed()
+      RETURNS TRIGGER AS $$
+      DECLARE
+        v_pitch_id uuid;
+        v_dates    text[];
+      BEGIN
+        IF TG_OP = 'DELETE' THEN
+          v_pitch_id := OLD.pitch_id;
+          SELECT array_agg(DISTINCT d::text)
+          INTO v_dates
+          FROM unnest(ARRAY[OLD.start_time::date, OLD.end_time::date]) d;
+        ELSIF TG_OP = 'INSERT' THEN
+          v_pitch_id := NEW.pitch_id;
+          SELECT array_agg(DISTINCT d::text)
+          INTO v_dates
+          FROM unnest(ARRAY[NEW.start_time::date, NEW.end_time::date]) d;
+        ELSE
+          v_pitch_id := NEW.pitch_id;
+          SELECT array_agg(DISTINCT d::text)
+          INTO v_dates
+          FROM unnest(ARRAY[
+            NEW.start_time::date, NEW.end_time::date,
+            OLD.start_time::date, OLD.end_time::date
+          ]) d;
+        END IF;
+
+        PERFORM pg_notify(
+          'booking_changed',
+          json_build_object('pitchId', v_pitch_id, 'dates', v_dates)::text
+        );
+        RETURN NULL;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+
+    await this.repo.query(`
+      DROP TRIGGER IF EXISTS booking_changed_notify ON bookings;
+    `);
+
+    await this.repo.query(`
+      CREATE TRIGGER booking_changed_notify
+      AFTER INSERT OR UPDATE OR DELETE ON bookings
+      FOR EACH ROW EXECUTE FUNCTION notify_booking_changed();
+    `);
+
+    this.logger.log('Booking triggers installed');
+  }
+
+  @Cron(CronExpression.EVERY_MINUTE)
+  async expirePendingBookings(): Promise<void> {
+    const result = await this.repo
+      .createQueryBuilder()
+      .delete()
+      .from(Booking)
+      .where("status = 'pending'")
+      .andWhere('pending_until IS NOT NULL')
+      .andWhere('pending_until <= :now', { now: new Date() })
+      .execute();
+
+    if (result.affected) {
+      this.logger.log(`Expired ${result.affected} pending booking(s)`);
+    }
   }
 
   private computeStatus(
@@ -77,10 +140,9 @@ export class BookingsService implements OnModuleInit {
       order: { start_time: 'ASC' },
     });
 
-    // Filter out expired pending bookings
     const now = new Date();
     return bookings.filter(
-      (b) =>
+      (b: Booking) =>
         !(b.status === 'pending' && b.pending_until && b.pending_until < now),
     );
   }
@@ -131,11 +193,12 @@ export class BookingsService implements OnModuleInit {
       notes: dto.notes ?? null,
       pitch: { id: pitchId },
     });
+
     return this.repo.save(booking);
   }
 
   async update(
-    pitchId: string,
+    _pitchId: string,
     id: string,
     dto: UpdateBookingDto,
   ): Promise<Booking> {
@@ -183,9 +246,14 @@ export class BookingsService implements OnModuleInit {
   }
 
   async deleteById(id: string): Promise<{ deleted: true }> {
-    const result = await this.repo.delete(id);
-    if (!result.affected)
-      throw new NotFoundException('Бронирование не найдено');
+    const booking = await this.repo.findOne({
+      where: { id },
+      relations: ['pitch'],
+    });
+    if (!booking) throw new NotFoundException('Бронирование не найдено');
+
+    await this.repo.delete(id);
+
     return { deleted: true };
   }
 }
