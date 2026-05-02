@@ -77,7 +77,7 @@ const menuItems = computed((): (MenuItem | MenuGroup)[] => {
   }
 
   if (isOwner.value) {
-    items.push(group('Мои данные', [item('staff', TeamOutlined, 'Сотрудники', true)]))
+    items.push(group('Мои данные', [item('staff', TeamOutlined, 'Сотрудники')]))
   }
 
   items.push(group('Аналитика', [item('statistics', BarChartOutlined, 'Статистика', true)]))
@@ -93,6 +93,7 @@ function handleClick(key: string) {
     home: 'home',
     complexes: 'complexes',
     users: 'users',
+    staff: 'staff',
     bookings: 'bookings',
   }
   if (routes[key]) router.push({ name: routes[key] })

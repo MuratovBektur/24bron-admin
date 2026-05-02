@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -47,6 +48,37 @@ export class UsersController {
     @Body() body: { complex_id: string | null },
   ) {
     return this.service.assignComplex(userId, body.complex_id);
+  }
+
+  @Get('my-staff')
+  @Roles('owner', 'owner_assistant')
+  getMyStaff(@Request() req: JwtRequest) {
+    return this.service.getOwnerStaff(req.user.userId, req.user.roles ?? []);
+  }
+
+  @Post('my-staff')
+  @Roles('owner')
+  createStaff(@Body() dto: CreateUserDto, @Request() req: JwtRequest) {
+    return this.service.createOwnerStaff(dto, req.user.userId);
+  }
+
+  @Patch('my-staff/:assistantId')
+  @Roles('owner')
+  updateStaff(
+    @Param('assistantId') assistantId: string,
+    @Body() dto: UpdateUserDto,
+    @Request() req: JwtRequest,
+  ) {
+    return this.service.updateOwnerStaff(assistantId, dto, req.user.userId);
+  }
+
+  @Delete('my-staff/:assistantId')
+  @Roles('owner')
+  removeStaff(
+    @Param('assistantId') assistantId: string,
+    @Request() req: JwtRequest,
+  ) {
+    return this.service.removeOwnerStaff(assistantId, req.user.userId);
   }
 
   @Get(':id/complex')

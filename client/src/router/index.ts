@@ -41,6 +41,12 @@ const router = createRouter({
           meta: { roles: ['super_admin', 'admin'] },
         },
         {
+          path: 'staff',
+          name: 'staff',
+          component: () => import('@/pages/staff/StaffPage.vue'),
+          meta: { roles: ['owner', 'owner_assistant'] },
+        },
+        {
           path: 'bookings',
           name: 'bookings',
           component: () => import('@/pages/bookings/BookingsPage.vue'),

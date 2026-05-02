@@ -10,6 +10,7 @@ import { User } from '../../entities/user.entity';
 import {
   UserRole,
   ADMIN_ASSIGNABLE_ROLES,
+  RoleName,
 } from '../../entities/user-role.entity';
 import { Complex } from '../../entities/complex.entity';
 import { OwnerStaff } from '../../entities/owner-staff.entity';
@@ -142,5 +143,115 @@ export class UsersService {
     return this.complexRepo.findOne({
       where: { owner: { id: staff.owner.id } },
     });
+  }
+
+  async getOwnerStaff(userId: string, roles: string[]): Promise<User[]> {
+    let ownerId = userId;
+
+    if (roles.includes('owner_assistant') && !roles.includes('owner')) {
+      const link = await this.ownerStaffRepo.findOne({
+        where: { assistant: { id: userId } },
+        relations: ['owner'],
+      });
+      if (!link) return [];
+      ownerId = link.owner.id;
+    }
+
+    const links = await this.ownerStaffRepo.find({
+      where: { owner: { id: ownerId } },
+      relations: ['assistant', 'assistant.roles'],
+    });
+    return links.map((l) => l.assistant);
+  }
+
+  async createOwnerStaff(dto: CreateUserDto, ownerId: string): Promise<User> {
+    const ownerComplex = await this.complexRepo.findOne({
+      where: { owner: { id: ownerId } },
+    });
+    if (!ownerComplex)
+      throw new BadRequestException(
+        'У вас нет назначенного комплекса. Обратитесь к администратору.',
+      );
+
+    const emailExists = await this.usersRepo.findOneBy({ email: dto.email });
+    if (emailExists)
+      throw new BadRequestException(
+        'Пользователь с таким email уже существует',
+      );
+
+    if (dto.phone) {
+      const phoneExists = await this.usersRepo.findOneBy({ phone: dto.phone });
+      if (phoneExists)
+        throw new BadRequestException(
+          'Пользователь с таким телефоном уже существует',
+        );
+    }
+
+    const role = await this.rolesRepo.findOneBy({
+      name: RoleName.OWNER_ASSISTANT,
+    });
+    if (!role) throw new NotFoundException('Роль не найдена');
+
+    const password_hash = await bcrypt.hash(dto.password, 10);
+    const user = this.usersRepo.create({
+      first_name: dto.first_name,
+      last_name: dto.last_name,
+      email: dto.email,
+      phone: dto.phone,
+      password_hash,
+      is_active: true,
+      must_change_password: true,
+      roles: [role],
+      created_by: { id: ownerId },
+    });
+    const saved = await this.usersRepo.save(user);
+
+    const staffLink = this.ownerStaffRepo.create({
+      owner: { id: ownerId },
+      assistant: { id: saved.id },
+    });
+    await this.ownerStaffRepo.save(staffLink);
+
+    const foundUser = await this.usersRepo.findOne({
+      where: { id: saved.id },
+      relations: ['roles'],
+    });
+
+    if (!foundUser) throw new NotFoundException('Юзер не найден');
+
+    return foundUser
+  }
+
+  async updateOwnerStaff(
+    assistantId: string,
+    dto: UpdateUserDto,
+    ownerId: string,
+  ): Promise<User> {
+    const link = await this.ownerStaffRepo.findOne({
+      where: { owner: { id: ownerId }, assistant: { id: assistantId } },
+    });
+    if (!link) throw new NotFoundException('Сотрудник не найден');
+
+    const user = await this.usersRepo.findOne({
+      where: { id: assistantId },
+      relations: ['roles'],
+    });
+    if (!user) throw new NotFoundException('Пользователь не найден');
+
+    if (dto.first_name !== undefined) user.first_name = dto.first_name;
+    if (dto.last_name !== undefined) user.last_name = dto.last_name;
+    if (dto.email !== undefined) user.email = dto.email;
+    if (dto.phone !== undefined) user.phone = dto.phone;
+    if (dto.is_active !== undefined) user.is_active = dto.is_active;
+
+    return this.usersRepo.save(user);
+  }
+
+  async removeOwnerStaff(assistantId: string, ownerId: string): Promise<void> {
+    const link = await this.ownerStaffRepo.findOne({
+      where: { owner: { id: ownerId }, assistant: { id: assistantId } },
+    });
+    if (!link) throw new NotFoundException('Сотрудник не найден');
+    await this.ownerStaffRepo.remove(link);
   }
 }
